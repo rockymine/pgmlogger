@@ -39,6 +39,10 @@ public class PGMEventListener implements Listener {
         boolean isCTW = event.getMatch().getModule(tc.oc.pgm.wool.WoolMatchModule.class) != null;
         if (!isCTW) return;
 
+        plugin.getLogger().info("Map: " + event.getMatch().getMap().getName());
+        plugin.getLogger().info("Gamemode: " + event.getMatch().getMap().getGamemode());
+        plugin.getLogger().info("Gamemodes: " + event.getMatch().getMap().getGamemodes());
+
         String mapName = event.getMatch().getMap().getName();
         String matchId = event.getMatch().getId();
         plugin.onMatchStart(mapName, matchId);

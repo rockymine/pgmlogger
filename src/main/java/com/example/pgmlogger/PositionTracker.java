@@ -114,7 +114,7 @@ public class PositionTracker {
      * Log a spawn event.
      */
     public void logSpawn(Player player, int x, int y, int z) {
-        String playerId = getPlayerIdentifier(player);
+        UUID playerId = getLoggableUUID(player);
         clearLastPosition(player.getUniqueId());
         write(MatchEvent.spawn(getTimestamp(), playerId, x, y, z));
     }
@@ -123,24 +123,27 @@ public class PositionTracker {
      * Log a death event.
      */
     public void logDeath(Player player, int x, int y, int z, String killerName) {
-        String playerId = getPlayerIdentifier(player);
-        write(MatchEvent.death(getTimestamp(), playerId, x, y, z, killerName));
+        UUID playerId = getLoggableUUID(player);
+        UUID killerId = resolveKillerUUID(killerName);
+        write(MatchEvent.death(getTimestamp(), playerId, x, y, z, killerId));
     }
 
     /**
      * Log a wool touch event.
      */
     public void logWoolTouch(Player player, int x, int y, int z, String woolColor) {
-        String playerId = getPlayerIdentifier(player);
-        write(MatchEvent.woolTouch(getTimestamp(), playerId, x, y, z, woolColor));
+        UUID playerId = getLoggableUUID(player);
+        int woolId = resolveWoolId(woolColor);
+        write(MatchEvent.woolTouch(getTimestamp(), playerId, x, y, z, woolId));
     }
 
     /**
      * Log a wool capture event.
      */
     public void logWoolCapture(Player player, int x, int y, int z, String woolColor) {
-        String playerId = getPlayerIdentifier(player);
-        write(MatchEvent.woolCapture(getTimestamp(), playerId, x, y, z, woolColor));
+        UUID playerId = getLoggableUUID(player);
+        int woolId = resolveWoolId(woolColor);
+        write(MatchEvent.woolCapture(getTimestamp(), playerId, x, y, z, woolId));
     }
 
     // =========================================================================
@@ -177,6 +180,7 @@ public class PositionTracker {
         // Check if position changed
         String posKey = x + "," + y + "," + z;
         UUID uuid = player.getUniqueId();
+        UUID logUuid = getLoggableUUID(player);
 
         if (posKey.equals(lastPositions.get(uuid))) {
             return; // Player hasn't moved, skip
@@ -185,11 +189,11 @@ public class PositionTracker {
 
         // Get player state
         String playerId = getPlayerIdentifier(player);
-        String heldItem = player.getItemInHand().getType().name();
+        int heldItem = player.getItemInHand().getType().ordinal();
         int invCount = countInventoryItems(player);
 
         // Write position event
-        write(MatchEvent.position(getTimestamp(), playerId, x, y, z, heldItem, invCount));
+        write(MatchEvent.position(getTimestamp(), logUuid, x, y, z, heldItem, invCount));
     }
 
     /**
@@ -224,6 +228,50 @@ public class PositionTracker {
     // =========================================================================
     // UTILITY METHODS
     // =========================================================================
+
+    /**
+     * @param player player
+     * @return real or anonymized UUID of the player
+     */
+    private UUID getLoggableUUID(Player player) {
+        UUID realUuid = player.getUniqueId();
+        if (permittedPlayers.isPermitted(realUuid)) {
+            return realUuid;
+        } else {
+            // Create a fake UUID based on the player's real UUID so it's consistent for this match
+            // but can't be reversed easily to find who it really is.
+            return UUID.nameUUIDFromBytes(("ANON_" + realUuid.toString()).getBytes());
+        }
+    }
+
+    /**
+     * @param killerName killer
+     * @return real or anonymized UUID of the player
+     */
+    private UUID resolveKillerUUID(String killerName) {
+        if (killerName == null) return null;
+
+        Player killer = Bukkit.getPlayerExact(killerName);
+        if (killer != null) {
+            return getLoggableUUID(killer);
+        }
+
+        // If killer is offline or invalid, hash the name so we at least have a UUID
+        return UUID.nameUUIDFromBytes(("OFFLINE_" + killerName).getBytes());
+    }
+
+    /**
+     * @param colorName color name
+     * @return converted color id
+     */
+    private int resolveWoolId(String colorName) {
+        try {
+            // limit usage of string by converting to ordinal immediately
+            return org.bukkit.DyeColor.valueOf(colorName).ordinal();
+        } catch (IllegalArgumentException e) {
+            return -1; // Unknown color
+        }
+    }
 
     /**
      * Get the output file name.
