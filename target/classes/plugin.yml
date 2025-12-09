@@ -1,0 +1,34 @@
+# =============================================================================
+# PLUGIN.YML - Plugin Descriptor
+# =============================================================================
+# This file tells Bukkit/Spigot about your plugin.
+# It MUST be in the root of your JAR file (Maven puts it there automatically
+# from src/main/resources/)
+#
+# REQUIRED FIELDS:
+#   name    - Plugin name (no spaces recommended)
+#   main    - Full path to your main class (the one extending JavaPlugin)
+#   version - Your plugin version
+#
+# OPTIONAL BUT IMPORTANT:
+#   api-version - Tells Bukkit which API version you're targeting
+#   depend      - Plugins that MUST be loaded before yours
+#   softdepend  - Plugins that SHOULD be loaded before yours (if present)
+# =============================================================================
+
+name: pgmlogger
+version: '1.0.0'
+main: com.example.pgmlogger.Pgmlogger
+api-version: '1.13'
+
+# This plugin requires PGM to be installed and loaded first
+# If PGM is not present, our plugin will NOT load (and that's correct -
+# we can't listen to PGM events if PGM isn't there!)
+depend:
+  - PGM
+
+# Description shown in /plugins command
+description: Logs player positions and wool events for CTW map analysis
+
+# Your name (optional)
+author: YourName

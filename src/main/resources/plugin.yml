@@ -1,0 +1,21 @@
+name: pgmlogger
+version: '1.0.0'
+main: com.example.pgmlogger.Pgmlogger
+api-version: '1.13'
+
+depend:
+  - PGM
+
+description: Logs player positions and events for CTW map analysis
+author: YourName
+
+commands:
+  pgmlogger:
+    description: Toggle logging features
+    usage: /pgmlogger <toggle|status> [feature]
+    aliases: [plog]
+
+permissions:
+  pgmlogger.admin:
+    description: Allows use of pgmlogger commands
+    default: op
