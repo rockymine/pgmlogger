@@ -71,21 +71,19 @@ public class PositionTracker {
     /**
      * Get player identifier - real name if permitted, anonymous number if not.
      */
-    public String getPlayerIdentifier(UUID uuid, String currentName) {
+    public String getPlayerIdentifier(UUID uuid) {
         return playerIdentifiers.computeIfAbsent(uuid, id -> {
             if (permittedPlayers.isPermitted(uuid)) {
-                // Use real name
                 String name = permittedPlayers.getPermittedName(uuid);
-                return name != null ? name : currentName;
+                return name != null ? name : String.valueOf(nextAnonymousId++);
             } else {
-                // Use anonymous ID
                 return String.valueOf(nextAnonymousId++);
             }
         });
     }
 
     public String getPlayerIdentifier(Player player) {
-        return getPlayerIdentifier(player.getUniqueId(), player.getName());
+        return getPlayerIdentifier(player.getUniqueId());
     }
 
     // =========================================================================
@@ -114,7 +112,7 @@ public class PositionTracker {
      * Log a spawn event.
      */
     public void logSpawn(Player player, int x, int y, int z) {
-        UUID playerId = getLoggableUUID(player);
+        String playerId = getPlayerIdentifier(player.getUniqueId());
         clearLastPosition(player.getUniqueId());
         write(MatchEvent.spawn(getTimestamp(), playerId, x, y, z));
     }
@@ -122,9 +120,9 @@ public class PositionTracker {
     /**
      * Log a death event.
      */
-    public void logDeath(Player player, int x, int y, int z, String killerName) {
-        UUID playerId = getLoggableUUID(player);
-        UUID killerId = resolveKillerUUID(killerName);
+    public void logDeath(Player player, int x, int y, int z, Player killer) {
+        String playerId = getPlayerIdentifier(player.getUniqueId());
+        String killerId = killer != null ? getPlayerIdentifier(killer.getUniqueId()) : null;
         write(MatchEvent.death(getTimestamp(), playerId, x, y, z, killerId));
     }
 
@@ -132,7 +130,7 @@ public class PositionTracker {
      * Log a wool touch event.
      */
     public void logWoolTouch(Player player, int x, int y, int z, String woolColor) {
-        UUID playerId = getLoggableUUID(player);
+        String playerId = getPlayerIdentifier(player.getUniqueId());
         int woolId = resolveWoolId(woolColor);
         write(MatchEvent.woolTouch(getTimestamp(), playerId, x, y, z, woolId));
     }
@@ -141,7 +139,7 @@ public class PositionTracker {
      * Log a wool capture event.
      */
     public void logWoolCapture(Player player, int x, int y, int z, String woolColor) {
-        UUID playerId = getLoggableUUID(player);
+        String playerId = getPlayerIdentifier(player.getUniqueId());
         int woolId = resolveWoolId(woolColor);
         write(MatchEvent.woolCapture(getTimestamp(), playerId, x, y, z, woolId));
     }
@@ -193,7 +191,7 @@ public class PositionTracker {
         int invCount = countInventoryItems(player);
 
         // Write position event
-        write(MatchEvent.position(getTimestamp(), logUuid, x, y, z, heldItem, invCount));
+        write(MatchEvent.position(getTimestamp(), playerId, x, y, z, heldItem, invCount));
     }
 
     /**

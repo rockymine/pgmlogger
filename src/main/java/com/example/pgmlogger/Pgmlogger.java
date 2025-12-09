@@ -231,9 +231,9 @@ public class Pgmlogger extends JavaPlugin {
 
     // Event logging
 
-    public void logDeath(Player player, int x, int y, int z, String killerName) {
+    public void logDeath(Player player, int x, int y, int z, Player killer) {
         if (positionTracker != null && logDeaths) {
-            positionTracker.logDeath(player, x, y, z, killerName);
+            positionTracker.logDeath(player, x, y, z, killer);
         }
     }
 

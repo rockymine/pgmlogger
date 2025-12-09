@@ -50,11 +50,11 @@ public class MatchEvent {
 
     private final int timestamp;        // seconds since match start
     private final EventType eventType;     // MS, ME, S, D, P, WT, WC
-    private final UUID playerId;     // null for MS/ME events
+    private final String playerId;     // null for MS/ME events
     private final Integer x, y, z;      // null for MS/ME events
     private final Integer heldItem;      // only for P events
     private final Integer invCount;     // only for P events
-    private final UUID killerId;
+    private final String killerId;
     public final Integer woolId; // DyeColor ordinal
     public final String mapName;
 
@@ -63,9 +63,9 @@ public class MatchEvent {
     /**
      * Full constructor.
      */
-    public MatchEvent(int timestamp, EventType eventType, UUID playerId,
+    public MatchEvent(int timestamp, EventType eventType, String playerId,
                       Integer x, Integer y, Integer z,
-                      Integer heldItem, Integer invCount, UUID killerId, Integer woolId, String mapName) {
+                      Integer heldItem, Integer invCount, String killerId, Integer woolId, String mapName) {
         this.timestamp = timestamp;
         this.eventType = eventType;
         this.playerId = playerId;
@@ -98,21 +98,21 @@ public class MatchEvent {
     /**
      * Create a spawn event.
      */
-    public static MatchEvent spawn(int timestamp, UUID playerId, int x, int y, int z) {
+    public static MatchEvent spawn(int timestamp, String playerId, int x, int y, int z) {
         return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null, null, null);
     }
 
     /**
      * Create a death event.
      */
-    public static MatchEvent death(int timestamp, UUID playerId, int x, int y, int z, UUID killerName) {
+    public static MatchEvent death(int timestamp, String playerId, int x, int y, int z, String killerName) {
         return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, killerName, null, null);
     }
 
     /**
      * Create a position event.
      */
-    public static MatchEvent position(int timestamp, UUID playerId, int x, int y, int z,
+    public static MatchEvent position(int timestamp, String playerId, int x, int y, int z,
                                       Integer heldItem, int invCount) {
         return new MatchEvent(timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null, null, null);
     }
@@ -120,14 +120,14 @@ public class MatchEvent {
     /**
      * Create a wool touch event.
      */
-    public static MatchEvent woolTouch(int timestamp, UUID playerId, int x, int y, int z, Integer woolColor) {
+    public static MatchEvent woolTouch(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
         return new MatchEvent(timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, null, woolColor, null);
     }
 
     /**
      * Create a wool capture event.
      */
-    public static MatchEvent woolCapture(int timestamp, UUID playerId, int x, int y, int z, Integer woolColor) {
+    public static MatchEvent woolCapture(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
         return new MatchEvent(timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, null, woolColor, null);
     }
 
@@ -145,7 +145,7 @@ public class MatchEvent {
 
             // Optional fields - only write if not null
             if (event.playerId != null) {
-                writer.write("player_id", event.playerId.toString());  // e.g. "fe3608b7-d105-4029-8800-34b3147065b6"
+                writer.write("player_id", event.playerId);  // e.g. "fe3608b7-d105-4029-8800-34b3147065b6"
             }
             if (event.x != null) writer.write("x", event.x);
             if (event.y != null) writer.write("y", event.y);
@@ -153,7 +153,7 @@ public class MatchEvent {
             if (event.heldItem != null) writer.write("held_item", event.heldItem);
             if (event.invCount != null) writer.write("inventory_count", event.invCount);
             if (event.killerId != null) {
-                writer.write("killer_id", event.killerId.toString());
+                writer.write("killer_id", event.killerId);
             }
             if (event.woolId != null) writer.write("wool_id", event.woolId);
             if (event.mapName != null) writer.write("map_name", event.mapName);
