@@ -1,15 +1,11 @@
 package com.example.pgmlogger;
 
 import blue.strategic.parquet.Dehydrator;
-import blue.strategic.parquet.Hydrator;
-import blue.strategic.parquet.HydratorSupplier;
 import blue.strategic.parquet.ValueWriter;
+
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Types;
-
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT32;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 
 import java.nio.ByteBuffer;
