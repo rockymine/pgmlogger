@@ -254,10 +254,4 @@ public class Pgmlogger extends JavaPlugin {
             positionTracker.logWoolCapture(player, x, y, z, woolId);
         }
     }
-
-    // Getters
-
-    public PermittedPlayers getPermittedPlayers() {
-        return permittedPlayers;
-    }
 }

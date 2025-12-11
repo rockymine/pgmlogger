@@ -140,13 +140,5 @@ public class MatchEvent {
             if (event.invCount != null) writer.write("inventory_count", event.invCount);
             if (event.woolId != null) writer.write("wool_id", event.woolId);
         }
-
-        private byte[] uuidToBytes(UUID uuid) {
-            ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
-            bb.order(ByteOrder.LITTLE_ENDIAN); // Or BIG_ENDIAN depending on your downstream tool preference
-            bb.putLong(uuid.getMostSignificantBits());
-            bb.putLong(uuid.getLeastSignificantBits());
-            return bb.array();
-        }
     }
 }

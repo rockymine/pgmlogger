@@ -177,7 +177,6 @@ public class PositionTracker {
         // Check if position changed
         String posKey = x + "," + y + "," + z;
         UUID uuid = player.getUniqueId();
-        UUID logUuid = getLoggableUUID(player);
 
         if (posKey.equals(lastPositions.get(uuid))) {
             return; // Player hasn't moved, skip
