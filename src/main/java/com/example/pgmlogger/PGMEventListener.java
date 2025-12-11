@@ -79,17 +79,7 @@ public class PGMEventListener implements Listener {
 
         Location loc = bukkitVictim.getLocation();
 
-        // Get killer name (can be null)
-        Player killerBukkit = null;
-        ParticipantState killer = event.getKiller();
-        if (killer != null) {
-            MatchPlayer killerPlayer = killer.getPlayer().orElse(null);
-            if (killerPlayer != null) {
-                killerBukkit = killerPlayer.getBukkit();
-            }
-        }
-
-        plugin.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ(), killerBukkit);
+        plugin.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
 
     // =========================================================================

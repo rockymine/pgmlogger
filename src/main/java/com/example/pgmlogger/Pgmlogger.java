@@ -186,7 +186,7 @@ public class Pgmlogger extends JavaPlugin {
         File parquetFile = new File(mapFolder, filename);
 
         try {
-            positionTracker = new PositionTracker(parquetFile, mapName, permittedPlayers);
+            positionTracker = new PositionTracker(parquetFile, permittedPlayers);
             startPositionTracking();
         } catch (IOException e) {
             getLogger().severe("Failed to create parquet file: " + e.getMessage());
@@ -231,9 +231,9 @@ public class Pgmlogger extends JavaPlugin {
 
     // Event logging
 
-    public void logDeath(Player player, int x, int y, int z, Player killer) {
+    public void logDeath(Player player, int x, int y, int z) {
         if (positionTracker != null && logDeaths) {
-            positionTracker.logDeath(player, x, y, z, killer);
+            positionTracker.logDeath(player, x, y, z);
         }
     }
 

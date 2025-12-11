@@ -48,7 +48,7 @@ public class PositionTracker {
     // CONSTRUCTOR
     // =========================================================================
 
-    public PositionTracker(File file, String mapName, PermittedPlayers permittedPlayers) throws IOException {
+    public PositionTracker(File file, PermittedPlayers permittedPlayers) throws IOException {
         this.file = file;
         this.matchStartTime = System.currentTimeMillis();
         this.permittedPlayers = permittedPlayers;
@@ -61,7 +61,7 @@ public class PositionTracker {
         );
 
         // Write match start event
-        write(MatchEvent.matchStart(mapName));
+        write(MatchEvent.matchStart());
     }
 
     // =========================================================================
@@ -120,10 +120,9 @@ public class PositionTracker {
     /**
      * Log a death event.
      */
-    public void logDeath(Player player, int x, int y, int z, Player killer) {
+    public void logDeath(Player player, int x, int y, int z) {
         String playerId = getPlayerIdentifier(player.getUniqueId());
-        String killerId = killer != null ? getPlayerIdentifier(killer.getUniqueId()) : null;
-        write(MatchEvent.death(getTimestamp(), playerId, x, y, z, killerId));
+        write(MatchEvent.death(getTimestamp(), playerId, x, y, z));
     }
 
     /**
@@ -240,22 +239,6 @@ public class PositionTracker {
             // but can't be reversed easily to find who it really is.
             return UUID.nameUUIDFromBytes(("ANON_" + realUuid.toString()).getBytes());
         }
-    }
-
-    /**
-     * @param killerName killer
-     * @return real or anonymized UUID of the player
-     */
-    private UUID resolveKillerUUID(String killerName) {
-        if (killerName == null) return null;
-
-        Player killer = Bukkit.getPlayerExact(killerName);
-        if (killer != null) {
-            return getLoggableUUID(killer);
-        }
-
-        // If killer is offline or invalid, hash the name so we at least have a UUID
-        return UUID.nameUUIDFromBytes(("OFFLINE_" + killerName).getBytes());
     }
 
     /**

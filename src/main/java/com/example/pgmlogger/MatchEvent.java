@@ -36,14 +36,8 @@ public class MatchEvent {
             Types.optional(PrimitiveTypeName.INT32).named("held_item"),  // held item
             Types.optional(PrimitiveTypeName.INT32).named("inventory_count"),      // inventory count
 
-            Types.optional(PrimitiveTypeName.BINARY).as(LogicalTypeAnnotation.stringType()).named("killer_id"),
-
             Types.optional(PrimitiveTypeName.INT32)
-                    .named("wool_id"), // wool id
-
-            Types.optional(PrimitiveTypeName.BINARY)
-                    .as(LogicalTypeAnnotation.stringType())
-                    .named("map_name") // map name
+                    .named("wool_id") // wool id
     );
 
     // Fields
@@ -54,9 +48,7 @@ public class MatchEvent {
     private final Integer x, y, z;      // null for MS/ME events
     private final Integer heldItem;      // only for P events
     private final Integer invCount;     // only for P events
-    private final String killerId;
     public final Integer woolId; // DyeColor ordinal
-    public final String mapName;
 
     // Constructors
 
@@ -65,7 +57,7 @@ public class MatchEvent {
      */
     public MatchEvent(int timestamp, EventType eventType, String playerId,
                       Integer x, Integer y, Integer z,
-                      Integer heldItem, Integer invCount, String killerId, Integer woolId, String mapName) {
+                      Integer heldItem, Integer invCount, Integer woolId) {
         this.timestamp = timestamp;
         this.eventType = eventType;
         this.playerId = playerId;
@@ -74,9 +66,7 @@ public class MatchEvent {
         this.z = z;
         this.heldItem = heldItem;
         this.invCount = invCount;
-        this.killerId = killerId;
         this.woolId = woolId;
-        this.mapName = mapName;
     }
 
     // Factory methods for events
@@ -84,29 +74,29 @@ public class MatchEvent {
     /**
      * Create a match start event.
      */
-    public static MatchEvent matchStart(String mapName) {
-        return new MatchEvent(0, EventType.MATCH_START, null, null, null, null, null, null, null, null, mapName);
+    public static MatchEvent matchStart() {
+        return new MatchEvent(0, EventType.MATCH_START, null, null, null, null, null, null, null);
     }
 
     /**
      * Create a match end event.
      */
     public static MatchEvent matchEnd(int timestamp) {
-        return new MatchEvent(timestamp, EventType.MATCH_END, null, null, null, null, null, null, null, null, null);
+        return new MatchEvent(timestamp, EventType.MATCH_END, null, null, null, null, null, null, null);
     }
 
     /**
      * Create a spawn event.
      */
     public static MatchEvent spawn(int timestamp, String playerId, int x, int y, int z) {
-        return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null, null, null);
+        return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null);
     }
 
     /**
      * Create a death event.
      */
-    public static MatchEvent death(int timestamp, String playerId, int x, int y, int z, String killerName) {
-        return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, killerName, null, null);
+    public static MatchEvent death(int timestamp, String playerId, int x, int y, int z) {
+        return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, null);
     }
 
     /**
@@ -114,21 +104,21 @@ public class MatchEvent {
      */
     public static MatchEvent position(int timestamp, String playerId, int x, int y, int z,
                                       Integer heldItem, int invCount) {
-        return new MatchEvent(timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null, null, null);
+        return new MatchEvent(timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null);
     }
 
     /**
      * Create a wool touch event.
      */
     public static MatchEvent woolTouch(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
-        return new MatchEvent(timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, null, woolColor, null);
+        return new MatchEvent(timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, woolColor);
     }
 
     /**
      * Create a wool capture event.
      */
     public static MatchEvent woolCapture(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
-        return new MatchEvent(timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, null, woolColor, null);
+        return new MatchEvent(timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, woolColor);
     }
 
     // Serializer
@@ -152,11 +142,7 @@ public class MatchEvent {
             if (event.z != null) writer.write("z", event.z);
             if (event.heldItem != null) writer.write("held_item", event.heldItem);
             if (event.invCount != null) writer.write("inventory_count", event.invCount);
-            if (event.killerId != null) {
-                writer.write("killer_id", event.killerId);
-            }
             if (event.woolId != null) writer.write("wool_id", event.woolId);
-            if (event.mapName != null) writer.write("map_name", event.mapName);
         }
 
         private byte[] uuidToBytes(UUID uuid) {
