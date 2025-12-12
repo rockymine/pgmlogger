@@ -4,7 +4,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
@@ -12,8 +11,16 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Manages the list of players who have given permission to use their real names.
- * Players not in this list will be anonymized in the data.
+ * Manages the list of players who have given permission to use their real names in logs.
+ *
+ * <p>Players not in this list will be assigned anonymous numeric identifiers instead
+ * of having their usernames recorded in match data files.
+ *
+ * <p>The permitted players list is stored in {@code permitted-players.yml} with the format:
+ * <pre>
+ * permitted:
+ *   uuid-string: "PlayerName"
+ * </pre>
  */
 public class PermittedPlayers {
 
@@ -21,6 +28,11 @@ public class PermittedPlayers {
     private final Map<UUID, String> permittedPlayers = new HashMap<>();
     private final File configFile;
 
+    /**
+     * Creates a new permitted players manager and loads the initial list.
+     *
+     * @param plugin the plugin instance, used for accessing the data folder and resources
+     */
     public PermittedPlayers(JavaPlugin plugin) {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "permitted-players.yml");
@@ -28,7 +40,13 @@ public class PermittedPlayers {
     }
 
     /**
-     * Load permitted players from config file.
+     * Loads or reloads the permitted players list from the configuration file.
+     *
+     * <p>If the configuration file doesn't exist, a default template is created from
+     * the plugin's resources. Invalid UUIDs in the config file are logged and skipped.
+     *
+     * <p>This method clears the existing list before loading, so it can be called to
+     * reload changes made to the config file.
      */
     public void load() {
         permittedPlayers.clear();
@@ -67,23 +85,22 @@ public class PermittedPlayers {
     }
 
     /**
-     * Check if a player has given permission to use their real name.
+     * Checks if a player has given permission to use their real name in logs.
+     *
+     * @param uuid the player's unique identifier
+     * @return true if the player is in the permitted list, false otherwise
      */
     public boolean isPermitted(UUID uuid) {
         return permittedPlayers.containsKey(uuid);
     }
 
     /**
-     * Get the player's name if permitted, or null if not.
+     * Retrieves the permitted name for a player.
+     *
+     * @param uuid the player's unique identifier
+     * @return the player's name if they are permitted, or null if not in the list
      */
     public String getPermittedName(UUID uuid) {
         return permittedPlayers.get(uuid);
-    }
-
-    /**
-     * Get count of permitted players.
-     */
-    public int getCount() {
-        return permittedPlayers.size();
     }
 }

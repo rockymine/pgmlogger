@@ -17,23 +17,45 @@ import tc.oc.pgm.wool.MonumentWool;
 import tc.oc.pgm.wool.PlayerWoolPlaceEvent;
 
 /**
- * Listens to PGM events and forwards them to our main plugin.
+ * Listens to PGM  events and forwards them to the logging system.
  *
- * Note: We pass Player objects instead of names for anonymous tracking.
- * The PositionTracker will assign sequential IDs internally.
+ * <p>This listener acts as a bridge between the PGM plugin's event system and
+ * the Parquet-based match logger. It:
+ * <ul>
+ *   <li>Filters for Capture the Wool (CTW) matches only</li>
+ *   <li>Extracts relevant data from PGM events</li>
+ *   <li>Forwards Player objects (not names) to maintain privacy controls</li>
+ *   <li>Uses MONITOR priority to observe events without interfering</li>
+ * </ul>
+ *
+ * <p><b>Privacy Note:</b> Player objects are passed to the tracker rather than
+ * names, allowing the PositionTracker to apply its anonymization logic based on
+ * the permitted players list.
  */
 public class PGMEventListener implements Listener {
 
     private final Pgmlogger plugin;
 
+    /**
+     * Creates a new PGM event listener.
+     *
+     * @param plugin the main plugin instance to forward events to
+     */
     public PGMEventListener(Pgmlogger plugin) {
         this.plugin = plugin;
     }
 
-    // =========================================================================
     // MATCH LIFECYCLE EVENTS
-    // =========================================================================
 
+    /**
+     * Handles match start events, initializing logging for CTW matches only.
+     *
+     * <p>This handler checks if the match has a WoolMatchModule (indicating CTW mode).
+     * Non-CTW matches are ignored. When a CTW match starts, it creates a new
+     * Parquet file and begins tracking.
+     *
+     * @param event the match start event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMatchStart(MatchStartEvent event) {
         boolean isCTW = event.getMatch().getModule(tc.oc.pgm.wool.WoolMatchModule.class) != null;
@@ -43,16 +65,29 @@ public class PGMEventListener implements Listener {
         String matchId = event.getMatch().getId();
         plugin.onMatchStart(mapName, matchId);
     }
-
+    /**
+     * Handles match end events, finalizing and closing the match data file.
+     *
+     * <p>This stops position sampling and writes the match end event to the
+     * Parquet file before closing it.
+     *
+     * @param event the match finish event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMatchEnd(MatchFinishEvent event) {
         plugin.onMatchEnd();
     }
 
-    // =========================================================================
     // PLAYER EVENTS
-    // =========================================================================
 
+    /**
+     * Handles player spawn events, logging the spawn location.
+     *
+     * <p>This event fires when a player spawns or respawns during the match.
+     * The spawn location is extracted from the event and logged.
+     *
+     * @param event the participant spawn event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerSpawn(ParticipantSpawnEvent event) {
         MatchPlayer matchPlayer = event.getPlayer();
@@ -65,6 +100,14 @@ public class PGMEventListener implements Listener {
         plugin.logSpawn(bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
 
+    /**
+     * Handles player death events, logging the death location.
+     *
+     * <p>The victim's location at the time of death is recorded. This can be
+     * used to analyze dangerous areas, engagement zones, or player behavior patterns.
+     *
+     * @param event the match player death event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerDeath(MatchPlayerDeathEvent event) {
         MatchPlayer victim = event.getVictim();
@@ -78,10 +121,19 @@ public class PGMEventListener implements Listener {
         plugin.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
 
-    // =========================================================================
     // WOOL EVENTS
-    // =========================================================================
 
+    /**
+     * Handles wool touch events when a player picks up wool for the first time in their life.
+     *
+     * <p>This event is filtered to only log the first touch of a wool objective
+     * during a player's current life (using {@code isFirstForPlayerLife()}). This
+     * prevents duplicate logs if a player drops and re-picks the same wool.
+     *
+     * <p>Only processes events for MonumentWool goals (CTW objectives).
+     *
+     * @param event the goal touch event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWoolTouch(GoalTouchEvent event) {
         if (!event.isFirstForPlayerLife()) return;
@@ -102,6 +154,15 @@ public class PGMEventListener implements Listener {
         plugin.logWoolTouch(bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ(), woolId);
     }
 
+    /**
+     * Handles wool capture events when a player places wool at the objective.
+     *
+     * <p>This event fires when a wool block is successfully placed at a monument,
+     * completing the objective. The location logged is where the wool block was
+     * placed, not the player's position.
+     *
+     * @param event the player wool place event
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWoolPlace(PlayerWoolPlaceEvent event) {
         ParticipantState participant = event.getPlayer();

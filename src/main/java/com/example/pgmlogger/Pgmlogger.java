@@ -14,11 +14,24 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Main plugin class for PGM Logger.
- * Logs player positions, deaths, and wool events for CTW map analysis.
+ * Main plugin class for logging PGM match events to Parquet files.
  *
- * Data is stored in Parquet format with folder structure:
- *   plugins/pgmlogger/data/{map_slug}/{timestamp}.parquet
+ * <p>This plugin tracks Capture the Wool (CTW) matches and records various events:
+ * <ul>
+ *   <li>Player positions (sampled every 5 seconds)</li>
+ *   <li>Player deaths and spawns</li>
+ *   <li>Wool objective interactions (touch and capture)</li>
+ *   <li>Match lifecycle (start and end)</li>
+ * </ul>
+ *
+ * <p><b>File Structure:</b> Data is organized as {@code data/{map_name}/{timestamp}.parquet}.
+ * Each match creates a new Parquet file timestamped at match start.
+ *
+ * <p><b>Feature Toggles:</b> Individual event types can be enabled/disabled via the
+ * {@code /pgmlogger toggle} command without restarting the plugin.
+ *
+ * <p><b>Privacy:</b> Player names are only logged if they appear in the permitted
+ * players list, otherwise anonymous IDs are assigned.
  */
 public class Pgmlogger extends JavaPlugin {
 
@@ -36,6 +49,12 @@ public class Pgmlogger extends JavaPlugin {
 
     // Plugin Lifecycle
 
+    /**
+     * Initializes the plugin when enabled by the server.
+     *
+     * <p>Sets up the data folder structure, loads the permitted players list,
+     * and registers the event listener for PGM matches.
+     */
     @Override
     public void onEnable() {
         dataFolder = new File(getDataFolder(), "data");
@@ -53,6 +72,12 @@ public class Pgmlogger extends JavaPlugin {
         getLogger().info("PGM Logger enabled! Listening for CTW matches.");
     }
 
+    /**
+     * Cleans up resources when the plugin is disabled.
+     *
+     * <p>Stops position tracking and closes any open Parquet files to ensure
+     * match data is properly saved.
+     */
     @Override
     public void onDisable() {
         stopPositionTracking();
@@ -61,6 +86,23 @@ public class Pgmlogger extends JavaPlugin {
 
     // Commands
 
+    /**
+     * Handles the {@code /pgmlogger} command and its subcommands.
+     *
+     * <p>Requires the {@code pgmlogger.admin} permission.
+     *
+     * <p>Available subcommands:
+     * <ul>
+     *   <li>{@code status} - Shows current feature toggles and recording status</li>
+     *   <li>{@code toggle <feature>} - Toggles individual features or all at once</li>
+     * </ul>
+     *
+     * @param sender the command sender
+     * @param command the command object
+     * @param label the command alias used
+     * @param args the command arguments
+     * @return true if the command was handled
+     */
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!command.getName().equalsIgnoreCase("pgmlogger")) {
@@ -99,6 +141,9 @@ public class Pgmlogger extends JavaPlugin {
         return true;
     }
 
+    /**
+     * Displays help information for the /pgmlogger command.
+     */
     private void showHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "=== PGM Logger Commands ===");
         sender.sendMessage(ChatColor.YELLOW + "/pgmlogger status" + ChatColor.WHITE + " - Show current settings");
@@ -106,6 +151,9 @@ public class Pgmlogger extends JavaPlugin {
         sender.sendMessage(ChatColor.GRAY + "Features: positions, deaths, spawns, wool, all");
     }
 
+    /**
+     * Displays the current status of logging features and active recording.
+     */
     private void showStatus(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "=== PGM Logger Status ===");
         sender.sendMessage(formatStatus("Positions", logPositions));
@@ -120,11 +168,20 @@ public class Pgmlogger extends JavaPlugin {
         }
     }
 
+    /**
+     * Formats a feature's enabled/disabled status for display.
+     */
     private String formatStatus(String feature, boolean enabled) {
         String status = enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF";
         return ChatColor.YELLOW + feature + ": " + status;
     }
 
+    /**
+     * Toggles a logging feature on or off.
+     *
+     * @param sender the command sender to notify of the change
+     * @param feature the feature name (positions, deaths, spawns, wool, or all)
+     */
     private void toggleFeature(CommandSender sender, String feature) {
         switch (feature) {
             case "positions":
@@ -158,6 +215,9 @@ public class Pgmlogger extends JavaPlugin {
         }
     }
 
+    /**
+     * Formats a boolean toggle state for display.
+     */
     private String formatToggle(boolean enabled) {
         return enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF";
     }
@@ -166,7 +226,15 @@ public class Pgmlogger extends JavaPlugin {
 
     /**
      * Called when a PGM match starts.
-     * Creates folder structure: data/{map_slug}/{timestamp}.parquet
+     *
+     * <p>Creates a new Parquet file in the map-specific folder with a timestamp filename.
+     * The folder structure is: {@code data/{map_slug}/{timestamp}.parquet}
+     *
+     * <p>Map names are converted to slugs by lowercasing, replacing spaces with
+     * underscores, and removing non-alphanumeric characters.
+     *
+     * @param mapName the name of the map being played
+     * @param matchId the unique match identifier (currently unused)
      */
     public void onMatchStart(String mapName, String matchId) {
         getLogger().info("Match started: " + mapName);
@@ -195,6 +263,8 @@ public class Pgmlogger extends JavaPlugin {
 
     /**
      * Called when a PGM match ends.
+     *
+     * <p>Stops position tracking, closes the Parquet file, and logs the output filename.
      */
     public void onMatchEnd() {
         getLogger().info("Match ended.");
@@ -208,6 +278,12 @@ public class Pgmlogger extends JavaPlugin {
 
     // Position tracking
 
+    /**
+     * Starts periodic position sampling for all players.
+     *
+     * <p>Schedules a task that runs every 100 ticks (5 seconds) to sample player
+     * positions, held items, and inventory counts.
+     */
     private void startPositionTracking() {
         positionSamplerTask = Bukkit.getScheduler().runTaskTimer(this, () -> {
             if (positionTracker != null && logPositions) {
@@ -218,6 +294,12 @@ public class Pgmlogger extends JavaPlugin {
         getLogger().info("Started position tracking (every 5 seconds)");
     }
 
+    /**
+     * Stops position sampling and closes the position tracker.
+     *
+     * <p>Cancels the scheduled sampling task and finalizes the Parquet file
+     * with a match end event.
+     */
     private void stopPositionTracking() {
         if (positionSamplerTask != null) {
             positionSamplerTask.cancel();
@@ -231,24 +313,58 @@ public class Pgmlogger extends JavaPlugin {
 
     // Event logging
 
+    /**
+     * Logs a player death event if death logging is enabled.
+     *
+     * @param player the player who died
+     * @param x the death x-coordinate
+     * @param y the death y-coordinate
+     * @param z the death z-coordinate
+     */
     public void logDeath(Player player, int x, int y, int z) {
         if (positionTracker != null && logDeaths) {
             positionTracker.logDeath(player, x, y, z);
         }
     }
 
+    /**
+     * Logs a player spawn event if spawn logging is enabled.
+     *
+     * @param player the player who spawned
+     * @param x the spawn x-coordinate
+     * @param y the spawn y-coordinate
+     * @param z the spawn z-coordinate
+     */
     public void logSpawn(Player player, int x, int y, int z) {
         if (positionTracker != null && logSpawns) {
             positionTracker.logSpawn(player, x, y, z);
         }
     }
 
+    /**
+     * Logs a wool touch event if wool logging is enabled.
+     *
+     * @param player the player who touched the wool
+     * @param x the touch x-coordinate
+     * @param y the touch y-coordinate
+     * @param z the touch z-coordinate
+     * @param woolId the wool color name
+     */
     public void logWoolTouch(Player player, int x, int y, int z, String woolId) {
         if (positionTracker != null && logWool) {
             positionTracker.logWoolTouch(player, x, y, z, woolId);
         }
     }
 
+    /**
+     * Logs a wool capture event if wool logging is enabled.
+     *
+     * @param player the player who captured the wool
+     * @param x the capture x-coordinate
+     * @param y the capture y-coordinate
+     * @param z the capture z-coordinate
+     * @param woolId the wool color name
+     */
     public void logWoolCapture(Player player, int x, int y, int z, String woolId) {
         if (positionTracker != null && logWool) {
             positionTracker.logWoolCapture(player, x, y, z, woolId);
