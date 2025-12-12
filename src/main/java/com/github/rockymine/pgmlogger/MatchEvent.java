@@ -7,6 +7,8 @@ import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Types;
 
+import static org.apache.parquet.schema.LogicalTypeAnnotation.intType;
+
 /**
  * Represents a single event in a match, stored in Parquet format.
  *
@@ -26,7 +28,7 @@ public class MatchEvent {
     public static final MessageType SCHEMA = new MessageType("match_event",
             // Required fields (present in every event)
             Types.required(PrimitiveTypeName.INT32).named("timestamp"),
-            Types.required(PrimitiveTypeName.INT32).named("event_type"),
+            Types.required(PrimitiveTypeName.INT32).as(intType(8, false)).named("event_type"),
 
             // Optional fields (can be null depending on event type)
             Types.optional(PrimitiveTypeName.INT32).named("player_id"),
@@ -35,7 +37,7 @@ public class MatchEvent {
             Types.optional(PrimitiveTypeName.INT32).named("z"),
             Types.optional(PrimitiveTypeName.INT32).named("held_item"),
             Types.optional(PrimitiveTypeName.INT32).named("inventory_count"),
-            Types.optional(PrimitiveTypeName.INT32).named("wool_id") // wool id
+            Types.optional(PrimitiveTypeName.INT32).as(intType(8, false)).named("wool_id")
     );
 
     private final int timestamp;
