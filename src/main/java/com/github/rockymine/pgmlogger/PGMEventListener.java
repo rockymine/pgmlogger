@@ -1,4 +1,4 @@
-package com.example.pgmlogger;
+package com.github.rockymine.pgmlogger;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;

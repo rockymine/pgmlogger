@@ -1,4 +1,4 @@
-package com.example.pgmlogger;
+package com.github.rockymine.pgmlogger;
 
 import blue.strategic.parquet.ParquetWriter;
 import org.bukkit.Bukkit;

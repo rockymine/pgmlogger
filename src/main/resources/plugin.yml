@@ -1,6 +1,6 @@
 name: pgmlogger
 version: '1.0.0'
-main: com.example.pgmlogger.Pgmlogger
+main: com.github.rockymine.pgmlogger.Pgmlogger
 api-version: '1.13'
 
 depend:

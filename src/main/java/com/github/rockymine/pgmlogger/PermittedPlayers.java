@@ -1,4 +1,4 @@
-package com.example.pgmlogger;
+package com.github.rockymine.pgmlogger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;

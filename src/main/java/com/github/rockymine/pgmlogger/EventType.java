@@ -1,4 +1,4 @@
-package com.example.pgmlogger;
+package com.github.rockymine.pgmlogger;
 
 /**
  * Types of events that can be logged during a PGM match.

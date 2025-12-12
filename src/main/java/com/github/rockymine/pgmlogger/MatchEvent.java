@@ -1,4 +1,4 @@
-package com.example.pgmlogger;
+package com.github.rockymine.pgmlogger;
 
 import blue.strategic.parquet.Dehydrator;
 import blue.strategic.parquet.ValueWriter;
@@ -6,7 +6,6 @@ import blue.strategic.parquet.ValueWriter;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Types;
-import org.apache.parquet.schema.LogicalTypeAnnotation;
 
 /**
  * Represents a single event in a match, stored in Parquet format.
