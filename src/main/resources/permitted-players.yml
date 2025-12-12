@@ -1,15 +1,25 @@
 # Players who have given permission to use their real names
-# Format: UUID: PlayerName
+# Format: UUID: assigned number
 # Players not in this list will be anonymized (shown as numbers)
 
 permitted:
-  fe3608b7-d105-4029-8800-34b3147065b6: rockymine
-  cc01304f-907b-4c80-b9c2-8f61872969d1: Just_
-  d1e3251c-def5-4328-a7e9-09335934d316: byRobo
-  e2d2c2c6-cea9-4510-9ab2-a091b5605b30: Ruediger_LP
-  1d3e45a8-8446-4103-831f-f59fee4aa497: pierrotwinner
-  436cb9e1-d630-4921-aa9f-59cc49a66701: SandGuruu
-  7d011615-eb73-4f34-9d06-c091936e1c7d: kenze
-  f7a1ea64-d102-40cf-ab9f-f2627a65bb2c: R1IY2N
-  cee77ddc-5911-41bf-bb49-2182299f8dea: skiibidi3
-  d48afee8-408e-4ff6-9799-f9f512c4fd02: JeremyPz_
+  #rockymine
+  fe3608b7-d105-4029-8800-34b3147065b6: -1
+  #Just_
+  cc01304f-907b-4c80-b9c2-8f61872969d1: -2
+  #_byRobo
+  d1e3251c-def5-4328-a7e9-09335934d316: -3
+  #Ruediger_LP
+  e2d2c2c6-cea9-4510-9ab2-a091b5605b30: -4
+  #pierrotwinner
+  1d3e45a8-8446-4103-831f-f59fee4aa497: -5
+  #Sandguruu
+  436cb9e1-d630-4921-aa9f-59cc49a66701: -6
+  #kenze
+  7d011615-eb73-4f34-9d06-c091936e1c7d: -7
+  #R1IY2N
+  f7a1ea64-d102-40cf-ab9f-f2627a65bb2c: -8
+  #skiibidi3
+  cee77ddc-5911-41bf-bb49-2182299f8dea: -9
+  #JeremyPz_
+  d48afee8-408e-4ff6-9799-f9f512c4fd02: -10

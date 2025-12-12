@@ -25,7 +25,7 @@ import java.util.UUID;
 public class PermittedPlayers {
 
     private final JavaPlugin plugin;
-    private final Map<UUID, String> permittedPlayers = new HashMap<>();
+    private final Map<UUID, Integer> permittedPlayers = new HashMap<>();
     private final File configFile;
 
     /**
@@ -73,8 +73,8 @@ public class PermittedPlayers {
             for (String uuidStr : config.getConfigurationSection("permitted").getKeys(false)) {
                 try {
                     UUID uuid = UUID.fromString(uuidStr);
-                    String name = config.getString("permitted." + uuidStr);
-                    permittedPlayers.put(uuid, name);
+                    int playerId = config.getInt("permitted." + uuidStr);
+                    permittedPlayers.put(uuid, playerId);
                 } catch (IllegalArgumentException e) {
                     plugin.getLogger().warning("Invalid UUID in permitted-players.yml: " + uuidStr);
                 }
@@ -95,12 +95,10 @@ public class PermittedPlayers {
     }
 
     /**
-     * Retrieves the permitted name for a player.
-     *
-     * @param uuid the player's unique identifier
-     * @return the player's name if they are permitted, or null if not in the list
+     * Get the fixed player ID for a permitted player.
+     * @return negative player ID, or null if not permitted
      */
-    public String getPermittedName(UUID uuid) {
+    public Integer getPlayerId(UUID uuid) {
         return permittedPlayers.get(uuid);
     }
 }

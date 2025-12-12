@@ -30,7 +30,7 @@ public class MatchEvent {
             Types.required(PrimitiveTypeName.INT32).named("event_type"),
 
             // Optional fields (can be null depending on event type)
-            Types.optional(PrimitiveTypeName.BINARY).as(LogicalTypeAnnotation.stringType()).named("player_id"),
+            Types.optional(PrimitiveTypeName.INT32).named("player_id"),
             Types.optional(PrimitiveTypeName.INT32).named("x"),
             Types.optional(PrimitiveTypeName.INT32).named("y"),
             Types.optional(PrimitiveTypeName.INT32).named("z"),
@@ -41,7 +41,7 @@ public class MatchEvent {
 
     private final int timestamp;
     private final EventType eventType;
-    private final String playerId;
+    private final Integer playerId;
     private final Integer x, y, z;
     private final Integer heldItem;
     private final Integer invCount;
@@ -56,7 +56,7 @@ public class MatchEvent {
      *
      * @param timestamp seconds since match start
      * @param eventType the type of event
-     * @param playerId the player identifier (name or anonymous ID), null for match-level events
+     * @param playerId the player id (negative or anonymous ID), null for match-level events
      * @param x the x-coordinate, null if not applicable
      * @param y the y-coordinate, null if not applicable
      * @param z the z-coordinate, null if not applicable
@@ -64,7 +64,7 @@ public class MatchEvent {
      * @param invCount the total inventory count, null if not applicable
      * @param woolId the wool color ordinal, null if not applicable
      */
-    public MatchEvent(int timestamp, EventType eventType, String playerId, Integer x, Integer y, Integer z,
+    public MatchEvent(int timestamp, EventType eventType, Integer playerId, Integer x, Integer y, Integer z,
                       Integer heldItem, Integer invCount, Integer woolId) {
         this.timestamp = timestamp;
         this.eventType = eventType;
@@ -106,7 +106,7 @@ public class MatchEvent {
      * @param z the spawn z-coordinate
      * @return a SPAWN event
      */
-    public static MatchEvent spawn(int timestamp, String playerId, int x, int y, int z) {
+    public static MatchEvent spawn(int timestamp, int playerId, int x, int y, int z) {
         return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null);
     }
 
@@ -120,7 +120,7 @@ public class MatchEvent {
      * @param z the death z-coordinate
      * @return a DEATH event
      */
-    public static MatchEvent death(int timestamp, String playerId, int x, int y, int z) {
+    public static MatchEvent death(int timestamp, int playerId, int x, int y, int z) {
         return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, null);
     }
 
@@ -136,7 +136,7 @@ public class MatchEvent {
      * @param invCount the total inventory item count
      * @return a POSITION event
      */
-    public static MatchEvent position(int timestamp, String playerId, int x, int y, int z,
+    public static MatchEvent position(int timestamp, int playerId, int x, int y, int z,
                                       Integer heldItem, int invCount) {
         return new MatchEvent(timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null);
     }
@@ -152,7 +152,7 @@ public class MatchEvent {
      * @param woolColor the wool color ordinal
      * @return a WOOL_TOUCH event
      */
-    public static MatchEvent woolTouch(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
+    public static MatchEvent woolTouch(int timestamp, int playerId, int x, int y, int z, Integer woolColor) {
         return new MatchEvent(timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, woolColor);
     }
 
@@ -167,7 +167,7 @@ public class MatchEvent {
      * @param woolColor the wool color ordinal
      * @return a WOOL_CAPTURE event
      */
-    public static MatchEvent woolCapture(int timestamp, String playerId, int x, int y, int z, Integer woolColor) {
+    public static MatchEvent woolCapture(int timestamp, int playerId, int x, int y, int z, Integer woolColor) {
         return new MatchEvent(timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, woolColor);
     }
 
@@ -191,9 +191,7 @@ public class MatchEvent {
             writer.write("event_type", eventTypeOrdinal);
 
             // Optional fields - only write if not null
-            if (event.playerId != null) {
-                writer.write("player_id", event.playerId);  // e.g. "fe3608b7-d105-4029-8800-34b3147065b6"
-            }
+            if (event.playerId != null) writer.write("player_id", event.playerId);
             if (event.x != null) writer.write("x", event.x);
             if (event.y != null) writer.write("y", event.y);
             if (event.z != null) writer.write("z", event.z);
