@@ -217,6 +217,11 @@ public class PositionTracker {
             return;
         }
 
+        // Check if the player is dead
+        if (matchPlayer.isDead()) {
+            return;
+        }
+
         // Get the player's current location
         Location loc = player.getLocation();
         int x = (int) loc.getX();
