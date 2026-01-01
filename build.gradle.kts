@@ -1,8 +1,9 @@
 plugins {
     id("java")
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
-group = "com.example"
+group = "com.github.rockymine"
 version = "1.0.0"
 
 repositories {
@@ -24,4 +25,12 @@ tasks.jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     from("src/main/resources")
+}
+
+spotless {
+    ratchetFrom = "origin/main"
+    java {
+        removeUnusedImports()
+        palantirJavaFormat("2.73.0").style("GOOGLE").formatJavadoc(true)
+    }
 }

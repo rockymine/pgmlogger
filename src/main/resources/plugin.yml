@@ -12,7 +12,7 @@ author: YourName
 commands:
   pgmlogger:
     description: Toggle logging features
-    usage: /pgmlogger <toggle|status> [feature]
+    usage: /pgmlogger <toggle|status|reload> [feature]
     aliases: [plog]
 
 permissions:

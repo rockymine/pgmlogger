@@ -1,0 +1,9 @@
+# Sampling interval in server ticks (20 ticks = 1 second).
+sampling:
+  interval-ticks: 100
+
+logging:
+  positions: true
+  deaths: true
+  spawns: true
+  wool: true
