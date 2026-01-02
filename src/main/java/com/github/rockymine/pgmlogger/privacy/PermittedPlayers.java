@@ -1,4 +1,4 @@
-package com.github.rockymine.pgmlogger;
+package com.github.rockymine.pgmlogger.privacy;
 
 import java.io.File;
 import java.io.InputStream;

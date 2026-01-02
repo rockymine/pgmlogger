@@ -1,11 +1,19 @@
-package com.github.rockymine.pgmlogger;
+package com.github.rockymine.pgmlogger.tracking;
 
 import blue.strategic.parquet.ParquetWriter;
+import com.github.rockymine.pgmlogger.model.MatchEvent;
+import com.github.rockymine.pgmlogger.privacy.PermittedPlayers;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -38,8 +46,8 @@ import tc.oc.pgm.api.player.MatchPlayer;
  * <p><b>Lifecycle:</b> Create an instance at match start, call logging methods throughout the
  * match, and call {@link #close()} at match end to finalize the file.
  *
- * <p><b>Thread Safety:</b> Write operations are synchronized to prevent concurrent modification of
- * the Parquet file.
+ * <p><b>Thread Safety:</b> Write operations are performed on a single background thread to avoid
+ * blocking the server tick.
  */
 public class PositionTracker {
 
@@ -50,6 +58,9 @@ public class PositionTracker {
   private final Map<UUID, Integer> playerIds = new HashMap<>();
   private int nextAnonymousId = 0;
   private final Map<UUID, String> lastPositions = new HashMap<>();
+  private final BlockingQueue<MatchEvent> writeQueue = new LinkedBlockingQueue<>();
+  private final ExecutorService writerExecutor;
+  private final AtomicBoolean closing = new AtomicBoolean(false);
 
   /**
    * Creates a new position tracker and initializes the match data file.
@@ -74,8 +85,15 @@ public class PositionTracker {
     // Create parquet writer
     this.writer = ParquetWriter.writeFile(MatchEvent.SCHEMA, file, MatchEvent.Serializer.INSTANCE);
 
+    this.writerExecutor = Executors.newSingleThreadExecutor(runnable -> {
+      Thread thread = new Thread(runnable, "pgmlogger-parquet-writer");
+      thread.setDaemon(true);
+      return thread;
+    });
+    this.writerExecutor.submit(this::drainWrites);
+
     // Write match start event
-    write(MatchEvent.matchStart());
+    queueWrite(MatchEvent.matchStart());
   }
 
   /**
@@ -103,9 +121,23 @@ public class PositionTracker {
    *
    * @param event the given MatchEvent
    */
-  private synchronized void write(MatchEvent event) {
+  private void queueWrite(MatchEvent event) {
+    if (!closing.get()) {
+      writeQueue.offer(event);
+    }
+  }
+
+  private void drainWrites() {
     try {
-      writer.write(event);
+      do {
+        MatchEvent event = writeQueue.poll(250, TimeUnit.MILLISECONDS);
+        if (event != null) {
+          writer.write(event);
+        }
+      } while (!closing.get() || !writeQueue.isEmpty());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      Bukkit.getLogger().log(Level.WARNING, "Parquet writer interrupted", e);
     } catch (IOException e) {
       Bukkit.getLogger().log(Level.WARNING, "Failed to write match event", e);
     }
@@ -131,7 +163,7 @@ public class PositionTracker {
   public void logSpawn(Player player, int x, int y, int z) {
     int playerId = getPlayerId(player.getUniqueId());
     clearLastPosition(player.getUniqueId());
-    write(MatchEvent.spawn(getTimestamp(), playerId, x, y, z));
+    queueWrite(MatchEvent.spawn(getTimestamp(), playerId, x, y, z));
   }
 
   /**
@@ -144,7 +176,7 @@ public class PositionTracker {
    */
   public void logDeath(Player player, int x, int y, int z) {
     int playerId = getPlayerId(player.getUniqueId());
-    write(MatchEvent.death(getTimestamp(), playerId, x, y, z));
+    queueWrite(MatchEvent.death(getTimestamp(), playerId, x, y, z));
   }
 
   /**
@@ -159,7 +191,7 @@ public class PositionTracker {
   public void logWoolTouch(Player player, int x, int y, int z, String woolColor) {
     int playerId = getPlayerId(player.getUniqueId());
     int woolId = resolveWoolId(woolColor);
-    write(MatchEvent.woolTouch(getTimestamp(), playerId, x, y, z, woolId));
+    queueWrite(MatchEvent.woolTouch(getTimestamp(), playerId, x, y, z, woolId));
   }
 
   /**
@@ -174,7 +206,7 @@ public class PositionTracker {
   public void logWoolCapture(Player player, int x, int y, int z, String woolColor) {
     int playerId = getPlayerId(player.getUniqueId());
     int woolId = resolveWoolId(woolColor);
-    write(MatchEvent.woolCapture(getTimestamp(), playerId, x, y, z, woolId));
+    queueWrite(MatchEvent.woolCapture(getTimestamp(), playerId, x, y, z, woolId));
   }
 
   /** Samples all online players who are participating. */
@@ -238,7 +270,7 @@ public class PositionTracker {
     int invCount = countInventoryItems(player);
 
     // Write position event
-    write(MatchEvent.position(getTimestamp(), playerId, x, y, z, heldItem, invCount));
+    queueWrite(MatchEvent.position(getTimestamp(), playerId, x, y, z, heldItem, invCount));
   }
 
   /**
@@ -298,12 +330,20 @@ public class PositionTracker {
   /** Closes the tracker and finalizes the match data file. */
   public void close() {
     // Write match end event
-    write(MatchEvent.matchEnd(getTimestamp()));
+    queueWrite(MatchEvent.matchEnd(getTimestamp()));
+    closing.set(true);
 
+    writerExecutor.shutdown();
     try {
+      if (!writerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        writerExecutor.shutdownNow();
+      }
       writer.close();
     } catch (IOException e) {
       Bukkit.getLogger().log(Level.WARNING, "Failed to close parquet writer", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      Bukkit.getLogger().log(Level.WARNING, "Interrupted while closing parquet writer", e);
     }
   }
 }

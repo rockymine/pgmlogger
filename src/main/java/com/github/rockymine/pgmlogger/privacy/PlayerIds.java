@@ -1,4 +1,4 @@
-package com.github.rockymine.pgmlogger;
+package com.github.rockymine.pgmlogger.privacy;
 
 /** Utility methods for deterministic player ID assignment. */
 public final class PlayerIds {

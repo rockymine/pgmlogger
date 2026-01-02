@@ -1,4 +1,4 @@
-package com.github.rockymine.pgmlogger;
+package com.github.rockymine.pgmlogger.model;
 
 import static org.apache.parquet.schema.LogicalTypeAnnotation.intType;
 
