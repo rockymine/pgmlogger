@@ -1,6 +1,6 @@
 package com.github.rockymine.pgmlogger.listeners;
 
-import com.github.rockymine.pgmlogger.PGMLogger;
+import com.github.rockymine.pgmlogger.logging.MatchLoggingService;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,6 +15,7 @@ import tc.oc.pgm.goals.events.GoalTouchEvent;
 import tc.oc.pgm.spawns.events.ParticipantSpawnEvent;
 import tc.oc.pgm.wool.MonumentWool;
 import tc.oc.pgm.wool.PlayerWoolPlaceEvent;
+import tc.oc.pgm.wool.WoolMatchModule;
 
 /**
  * Listens to PGM events and forwards them to the logging system.
@@ -34,15 +35,15 @@ import tc.oc.pgm.wool.PlayerWoolPlaceEvent;
  */
 public class PGMEventListener implements Listener {
 
-  private final PGMLogger plugin;
+  private final MatchLoggingService loggingService;
 
   /**
    * Creates a new PGM event listener.
    *
    * @param plugin the main plugin instance to forward events to
    */
-  public PGMEventListener(PGMLogger plugin) {
-    this.plugin = plugin;
+  public PGMEventListener(MatchLoggingService loggingService) {
+    this.loggingService = loggingService;
   }
 
   // MATCH LIFECYCLE EVENTS
@@ -58,12 +59,12 @@ public class PGMEventListener implements Listener {
    */
   @EventHandler(priority = EventPriority.MONITOR)
   public void onMatchStart(MatchStartEvent event) {
-    boolean isCTW = event.getMatch().getModule(tc.oc.pgm.wool.WoolMatchModule.class) != null;
+    boolean isCTW = event.getMatch().getModule(WoolMatchModule.class) != null;
     if (!isCTW) return;
 
     String mapName = event.getMatch().getMap().getName();
     String matchId = event.getMatch().getId();
-    plugin.onMatchStart(mapName, matchId);
+    loggingService.onMatchStart(mapName, matchId);
   }
 
   /**
@@ -76,7 +77,7 @@ public class PGMEventListener implements Listener {
    */
   @EventHandler(priority = EventPriority.MONITOR)
   public void onMatchEnd(MatchFinishEvent event) {
-    plugin.onMatchEnd();
+    loggingService.onMatchEnd();
   }
 
   // PLAYER EVENTS
@@ -98,7 +99,7 @@ public class PGMEventListener implements Listener {
     if (bukkitPlayer == null) return;
 
     Location loc = event.getLocation();
-    plugin.logSpawn(bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
+    loggingService.logSpawn(bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
   }
 
   /**
@@ -119,7 +120,7 @@ public class PGMEventListener implements Listener {
 
     Location loc = bukkitVictim.getLocation();
 
-    plugin.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
+    loggingService.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
   }
 
   // WOOL EVENTS
@@ -152,7 +153,8 @@ public class PGMEventListener implements Listener {
     Player bukkitPlayer = matchPlayer.getBukkit();
     Location loc = bukkitPlayer.getLocation();
 
-    plugin.logWoolTouch(bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ(), woolId);
+    loggingService.logWoolTouch(
+        bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ(), woolId);
   }
 
   /**
@@ -175,7 +177,7 @@ public class PGMEventListener implements Listener {
     Location loc = event.getBlock().getLocation();
     String woolId = event.getWool().getDyeColor().toString();
 
-    plugin.logWoolCapture(
+    loggingService.logWoolCapture(
         bukkitPlayer, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ(), woolId);
   }
 }

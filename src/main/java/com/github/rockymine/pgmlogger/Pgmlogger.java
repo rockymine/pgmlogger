@@ -1,19 +1,13 @@
 package com.github.rockymine.pgmlogger;
 
 import com.github.rockymine.pgmlogger.listeners.PGMEventListener;
+import com.github.rockymine.pgmlogger.logging.MatchLoggingService;
 import com.github.rockymine.pgmlogger.privacy.PermittedPlayers;
-import com.github.rockymine.pgmlogger.tracking.PositionTracker;
 import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
 /**
  * Main plugin class for logging PGM match events to Parquet files.
@@ -38,19 +32,8 @@ import org.bukkit.scheduler.BukkitTask;
  */
 public class PGMLogger extends JavaPlugin {
 
-  private static final DateTimeFormatter FILENAME_FORMAT =
-      DateTimeFormatter.ofPattern("uuuu-MM-dd_HH-mm-ss");
-
-  private PositionTracker positionTracker;
-  private BukkitTask positionSamplerTask;
-  private File dataFolder;
   private PermittedPlayers permittedPlayers;
-
-  private int sampleIntervalTicks = 100;
-  private boolean logPositions = true;
-  private boolean logDeaths = true;
-  private boolean logSpawns = true;
-  private boolean logWool = true;
+  private MatchLoggingService loggingService;
 
   // Plugin Lifecycle
 
@@ -63,16 +46,14 @@ public class PGMLogger extends JavaPlugin {
   @Override
   public void onEnable() {
     saveDefaultConfig();
-    loadSettings();
 
-    dataFolder = new File(getDataFolder(), "data");
-    if (!dataFolder.exists()) {
-      dataFolder.mkdirs();
-    }
+    File dataFolder = new File(getDataFolder(), "data");
 
     permittedPlayers = new PermittedPlayers(this);
+    loggingService = new MatchLoggingService(this, dataFolder, permittedPlayers);
+    loadSettings();
 
-    getServer().getPluginManager().registerEvents(new PGMEventListener(this), this);
+    getServer().getPluginManager().registerEvents(new PGMEventListener(loggingService), this);
 
     getLogger().info("PGM Logger enabled! Listening for CTW matches.");
   }
@@ -85,8 +66,7 @@ public class PGMLogger extends JavaPlugin {
    */
   @Override
   public void onDisable() {
-    stopPositionTracking();
-    getLogger().info("PGM Logger disabled.");
+    loggingService.shutdown();
   }
 
   // Commands
@@ -168,13 +148,14 @@ public class PGMLogger extends JavaPlugin {
   /** Displays the current status of logging features and active recording. */
   private void showStatus(CommandSender sender) {
     sender.sendMessage(ChatColor.GOLD + "=== PGM Logger Status ===");
-    sender.sendMessage(formatStatus("Positions", logPositions));
-    sender.sendMessage(formatStatus("Deaths", logDeaths));
-    sender.sendMessage(formatStatus("Spawns", logSpawns));
-    sender.sendMessage(formatStatus("Wool", logWool));
+    sender.sendMessage(formatStatus("Positions", loggingService.isLogPositionsEnabled()));
+    sender.sendMessage(formatStatus("Deaths", loggingService.isLogDeathsEnabled()));
+    sender.sendMessage(formatStatus("Spawns", loggingService.isLogSpawnsEnabled()));
+    sender.sendMessage(formatStatus("Wool", loggingService.isLogWoolEnabled()));
 
-    if (positionTracker != null) {
-      sender.sendMessage(ChatColor.GREEN + "Currently recording: " + positionTracker.getFileName());
+    String activeFileName = loggingService.getActiveFileName();
+    if (activeFileName != null) {
+      sender.sendMessage(ChatColor.GREEN + "Currently recording: " + activeFileName);
     } else {
       sender.sendMessage(ChatColor.GRAY + "Not recording (no active match).");
     }
@@ -196,27 +177,31 @@ public class PGMLogger extends JavaPlugin {
     switch (feature) {
       case "positions":
       case "pos":
-        logPositions = !logPositions;
-        sender.sendMessage(ChatColor.YELLOW + "Position logging: " + formatToggle(logPositions));
+        sender.sendMessage(ChatColor.YELLOW
+            + "Position logging: "
+            + formatToggle(loggingService.togglePositions()));
         break;
       case "deaths":
       case "death":
-        logDeaths = !logDeaths;
-        sender.sendMessage(ChatColor.YELLOW + "Death logging: " + formatToggle(logDeaths));
+        sender.sendMessage(
+            ChatColor.YELLOW + "Death logging: " + formatToggle(loggingService.toggleDeaths()));
         break;
       case "spawns":
       case "spawn":
-        logSpawns = !logSpawns;
-        sender.sendMessage(ChatColor.YELLOW + "Spawn logging: " + formatToggle(logSpawns));
+        sender.sendMessage(
+            ChatColor.YELLOW + "Spawn logging: " + formatToggle(loggingService.toggleSpawns()));
         break;
       case "wool":
       case "wools":
-        logWool = !logWool;
-        sender.sendMessage(ChatColor.YELLOW + "Wool logging: " + formatToggle(logWool));
+        sender.sendMessage(
+            ChatColor.YELLOW + "Wool logging: " + formatToggle(loggingService.toggleWool()));
         break;
       case "all":
-        boolean newState = !(logPositions && logDeaths && logSpawns && logWool);
-        logPositions = logDeaths = logSpawns = logWool = newState;
+        boolean newState = !(loggingService.isLogPositionsEnabled()
+            && loggingService.isLogDeathsEnabled()
+            && loggingService.isLogSpawnsEnabled()
+            && loggingService.isLogWoolEnabled());
+        loggingService.setAllLogging(newState);
         sender.sendMessage(ChatColor.YELLOW + "All logging: " + formatToggle(newState));
         break;
       default:
@@ -230,163 +215,12 @@ public class PGMLogger extends JavaPlugin {
     return enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF";
   }
 
-  // Match Lifecycle
-
-  /**
-   * Called when a PGM match starts.
-   *
-   * <p>Creates a new Parquet file in the map-specific folder with a timestamp filename. The folder
-   * structure is: {@code data/{map_slug}/{timestamp}.parquet}
-   *
-   * <p>Map names are converted to slugs by lowercasing, replacing spaces with underscores, and
-   * removing non-alphanumeric characters.
-   *
-   * @param mapName the name of the map being played
-   * @param matchId the unique match identifier (currently unused)
-   */
-  public void onMatchStart(String mapName, String matchId) {
-    getLogger().info("Match started: " + mapName);
-
-    // Create map-specific folder
-    String mapSlug = mapName.toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
-
-    File mapFolder = new File(dataFolder, mapSlug);
-    if (!mapFolder.exists()) {
-      mapFolder.mkdirs();
-    }
-
-    // Create parquet file with timestamp
-    String filename = FILENAME_FORMAT.format(LocalDateTime.now()) + ".parquet";
-    File parquetFile = new File(mapFolder, filename);
-
-    try {
-      positionTracker = new PositionTracker(parquetFile, permittedPlayers);
-      startPositionTracking();
-    } catch (IOException e) {
-      getLogger().severe("Failed to create parquet file: " + e.getMessage());
-    }
-  }
-
-  /**
-   * Called when a PGM match ends.
-   *
-   * <p>Stops position tracking, closes the Parquet file, and logs the output filename.
-   */
-  public void onMatchEnd() {
-    getLogger().info("Match ended.");
-    stopPositionTracking();
-
-    if (positionTracker != null) {
-      getLogger().info("Data saved to: " + positionTracker.getFileName());
-      positionTracker = null;
-    }
-  }
-
-  // Position tracking
-
-  /**
-   * Starts periodic position sampling for all players.
-   *
-   * <p>Schedules a task that runs every 100 ticks (5 seconds) to sample player positions, held
-   * items, and inventory counts.
-   */
-  private void startPositionTracking() {
-    positionSamplerTask = Bukkit.getScheduler()
-        .runTaskTimer(
-            this,
-            () -> {
-              if (positionTracker != null && logPositions) {
-                positionTracker.sampleAllPlayers();
-              }
-            },
-            sampleIntervalTicks,
-            sampleIntervalTicks);
-
-    double seconds = sampleIntervalTicks / 20.0;
-    getLogger().info("Started position tracking (every " + seconds + " seconds)");
-  }
-
-  /**
-   * Stops position sampling and closes the position tracker.
-   *
-   * <p>Cancels the scheduled sampling task and finalizes the Parquet file with a match end event.
-   */
-  private void stopPositionTracking() {
-    if (positionSamplerTask != null) {
-      positionSamplerTask.cancel();
-      positionSamplerTask = null;
-    }
-
-    if (positionTracker != null) {
-      positionTracker.close();
-    }
-  }
-
-  // Event logging
-
-  /**
-   * Logs a player death event if death logging is enabled.
-   *
-   * @param player the player who died
-   * @param x the death x-coordinate
-   * @param y the death y-coordinate
-   * @param z the death z-coordinate
-   */
-  public void logDeath(Player player, int x, int y, int z) {
-    if (positionTracker != null && logDeaths) {
-      positionTracker.logDeath(player, x, y, z);
-    }
-  }
-
-  /**
-   * Logs a player spawn event if spawn logging is enabled.
-   *
-   * @param player the player who spawned
-   * @param x the spawn x-coordinate
-   * @param y the spawn y-coordinate
-   * @param z the spawn z-coordinate
-   */
-  public void logSpawn(Player player, int x, int y, int z) {
-    if (positionTracker != null && logSpawns) {
-      positionTracker.logSpawn(player, x, y, z);
-    }
-  }
-
-  /**
-   * Logs a wool touch event if wool logging is enabled.
-   *
-   * @param player the player who touched the wool
-   * @param x the touch x-coordinate
-   * @param y the touch y-coordinate
-   * @param z the touch z-coordinate
-   * @param woolId the wool color name
-   */
-  public void logWoolTouch(Player player, int x, int y, int z, String woolId) {
-    if (positionTracker != null && logWool) {
-      positionTracker.logWoolTouch(player, x, y, z, woolId);
-    }
-  }
-
-  /**
-   * Logs a wool capture event if wool logging is enabled.
-   *
-   * @param player the player who captured the wool
-   * @param x the capture x-coordinate
-   * @param y the capture y-coordinate
-   * @param z the capture z-coordinate
-   * @param woolId the wool color name
-   */
-  public void logWoolCapture(Player player, int x, int y, int z, String woolId) {
-    if (positionTracker != null && logWool) {
-      positionTracker.logWoolCapture(player, x, y, z, woolId);
-    }
-  }
-
   private void loadSettings() {
-    sampleIntervalTicks = Math.max(1, getConfig().getInt("sampling.interval-ticks", 100));
-    logPositions = getConfig().getBoolean("logging.positions", true);
-    logDeaths = getConfig().getBoolean("logging.deaths", true);
-    logSpawns = getConfig().getBoolean("logging.spawns", true);
-    logWool = getConfig().getBoolean("logging.wool", true);
+    loggingService.applySettings(
+        Math.max(1, getConfig().getInt("sampling.interval-ticks", 100)),
+        getConfig().getBoolean("logging.positions", true),
+        getConfig().getBoolean("logging.deaths", true),
+        getConfig().getBoolean("logging.spawns", true),
+        getConfig().getBoolean("logging.wool", true));
   }
 }
