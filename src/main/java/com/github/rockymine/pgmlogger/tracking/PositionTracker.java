@@ -50,6 +50,7 @@ public class PositionTracker {
   private final Map<UUID, Integer> playerIds = new HashMap<>();
   private int nextAnonymousId = 0;
   private final Map<UUID, String> lastPositions = new HashMap<>();
+  private boolean writerFailedLogged = false;
 
   /**
    * Creates a new position tracker and initializes the match data file.
@@ -103,6 +104,13 @@ public class PositionTracker {
    * @param event the given MatchEvent
    */
   private void queueWrite(MatchEvent event) {
+    if (eventWriter.hasFailed()) {
+      if (!writerFailedLogged) {
+        writerFailedLogged = true;
+        Bukkit.getLogger().warning("Parquet writer failed; dropping match events.");
+      }
+      return;
+    }
     eventWriter.write(event);
   }
 

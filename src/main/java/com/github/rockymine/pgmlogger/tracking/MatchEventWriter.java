@@ -19,6 +19,7 @@ final class MatchEventWriter {
   private final BlockingQueue<MatchEvent> writeQueue = new LinkedBlockingQueue<>();
   private final ExecutorService writerExecutor;
   private final AtomicBoolean closing = new AtomicBoolean(false);
+  private final AtomicBoolean failed = new AtomicBoolean(false);
 
   MatchEventWriter(File file) throws IOException {
     this.writer = ParquetWriter.writeFile(MatchEvent.SCHEMA, file, MatchEvent.Serializer.INSTANCE);
@@ -31,9 +32,13 @@ final class MatchEventWriter {
   }
 
   void write(MatchEvent event) {
-    if (!closing.get()) {
+    if (!closing.get() && !failed.get()) {
       writeQueue.offer(event);
     }
+  }
+
+  boolean hasFailed() {
+    return failed.get();
   }
 
   private void drainWrites() {
@@ -48,7 +53,10 @@ final class MatchEventWriter {
       Thread.currentThread().interrupt();
       Bukkit.getLogger().log(Level.WARNING, "Parquet writer interrupted", e);
     } catch (IOException e) {
-      Bukkit.getLogger().log(Level.WARNING, "Failed to write match event", e);
+      failed.set(true);
+      closing.set(true);
+      writeQueue.clear();
+      Bukkit.getLogger().log(Level.WARNING, "Failed to write match event; stopping logger", e);
     }
   }
 
