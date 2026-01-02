@@ -1,6 +1,5 @@
 package com.github.rockymine.pgmlogger.tracking;
 
-import blue.strategic.parquet.ParquetWriter;
 import com.github.rockymine.pgmlogger.model.MatchEvent;
 import com.github.rockymine.pgmlogger.privacy.PermittedPlayers;
 import java.io.File;
@@ -8,13 +7,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -52,15 +44,12 @@ import tc.oc.pgm.api.player.MatchPlayer;
 public class PositionTracker {
 
   private final File file;
-  private final ParquetWriter<MatchEvent> writer;
+  private final MatchEventWriter eventWriter;
   private final long matchStartTime;
   private final PermittedPlayers permittedPlayers;
   private final Map<UUID, Integer> playerIds = new HashMap<>();
   private int nextAnonymousId = 0;
   private final Map<UUID, String> lastPositions = new HashMap<>();
-  private final BlockingQueue<MatchEvent> writeQueue = new LinkedBlockingQueue<>();
-  private final ExecutorService writerExecutor;
-  private final AtomicBoolean closing = new AtomicBoolean(false);
 
   /**
    * Creates a new position tracker and initializes the match data file.
@@ -82,15 +71,7 @@ public class PositionTracker {
     this.matchStartTime = System.currentTimeMillis();
     this.permittedPlayers = permittedPlayers;
 
-    // Create parquet writer
-    this.writer = ParquetWriter.writeFile(MatchEvent.SCHEMA, file, MatchEvent.Serializer.INSTANCE);
-
-    this.writerExecutor = Executors.newSingleThreadExecutor(runnable -> {
-      Thread thread = new Thread(runnable, "pgmlogger-parquet-writer");
-      thread.setDaemon(true);
-      return thread;
-    });
-    this.writerExecutor.submit(this::drainWrites);
+    this.eventWriter = new MatchEventWriter(file);
 
     // Write match start event
     queueWrite(MatchEvent.matchStart());
@@ -122,25 +103,7 @@ public class PositionTracker {
    * @param event the given MatchEvent
    */
   private void queueWrite(MatchEvent event) {
-    if (!closing.get()) {
-      writeQueue.offer(event);
-    }
-  }
-
-  private void drainWrites() {
-    try {
-      do {
-        MatchEvent event = writeQueue.poll(250, TimeUnit.MILLISECONDS);
-        if (event != null) {
-          writer.write(event);
-        }
-      } while (!closing.get() || !writeQueue.isEmpty());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Bukkit.getLogger().log(Level.WARNING, "Parquet writer interrupted", e);
-    } catch (IOException e) {
-      Bukkit.getLogger().log(Level.WARNING, "Failed to write match event", e);
-    }
+    eventWriter.write(event);
   }
 
   /**
@@ -331,19 +294,6 @@ public class PositionTracker {
   public void close() {
     // Write match end event
     queueWrite(MatchEvent.matchEnd(getTimestamp()));
-    closing.set(true);
-
-    writerExecutor.shutdown();
-    try {
-      if (!writerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-        writerExecutor.shutdownNow();
-      }
-      writer.close();
-    } catch (IOException e) {
-      Bukkit.getLogger().log(Level.WARNING, "Failed to close parquet writer", e);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Bukkit.getLogger().log(Level.WARNING, "Interrupted while closing parquet writer", e);
-    }
+    eventWriter.close();
   }
 }
