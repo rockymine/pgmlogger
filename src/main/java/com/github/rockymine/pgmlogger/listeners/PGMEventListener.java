@@ -40,7 +40,7 @@ public class PGMEventListener implements Listener {
   /**
    * Creates a new PGM event listener.
    *
-   * @param plugin the main plugin instance to forward events to
+   * @param loggingService the main plugin instance to forward events to
    */
   public PGMEventListener(MatchLoggingService loggingService) {
     this.loggingService = loggingService;
@@ -120,7 +120,28 @@ public class PGMEventListener implements Listener {
 
     Location loc = bukkitVictim.getLocation();
 
-    loggingService.logDeath(bukkitVictim, (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
+    // Killer
+    Player killerBukkit = null;
+    Location killerLoc = null;
+    ParticipantState killer = event.getKiller();
+
+    if (killer != null) {
+      MatchPlayer killerPlayer = killer.getPlayer().orElse(null);
+      if (killerPlayer != null && killerPlayer.getBukkit() != null) {
+        killerBukkit = killerPlayer.getBukkit();
+        killerLoc = killerBukkit.getLocation();
+      }
+    }
+
+    loggingService.logDeath(
+        bukkitVictim,
+        (int) loc.getX(),
+        (int) loc.getY(),
+        (int) loc.getZ(),
+        killerBukkit,
+        killerLoc != null ? (int) killerLoc.getX() : null,
+        killerLoc != null ? (int) killerLoc.getY() : null,
+        killerLoc != null ? (int) killerLoc.getZ() : null);
   }
 
   // WOOL EVENTS

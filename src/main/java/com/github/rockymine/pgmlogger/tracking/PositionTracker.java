@@ -140,14 +140,24 @@ public class PositionTracker {
   /**
    * Logs a player death event to the match record.
    *
-   * @param player the player who died.
-   * @param x the x coordinate of the death location.
-   * @param y the y coordinate of the death location.
-   * @param z the z coordinate of the death location.
+   * @param victim the player who died.
+   * @param vx the x coordinate of the death location.
+   * @param vy the y coordinate of the death location.
+   * @param vz the z coordinate of the death location.
+   * @param killer the player that killed the victim (or null)
+   * @param kx the x coordinate of the kill location.
+   * @param ky the y coordinate of the kill location.
+   * @param kz the z coordinate of the kill location.
    */
-  public void logDeath(Player player, int x, int y, int z) {
-    int playerId = getPlayerId(player.getUniqueId());
-    queueWrite(MatchEvent.death(getTimestamp(), playerId, x, y, z));
+  public void logDeath(
+      Player victim, int vx, int vy, int vz, Player killer, Integer kx, Integer ky, Integer kz) {
+    int victimId = getPlayerId(victim.getUniqueId());
+    queueWrite(MatchEvent.death(getTimestamp(), victimId, vx, vy, vz));
+
+    if (killer != null) {
+      int killerId = getPlayerId(killer.getUniqueId());
+      queueWrite(MatchEvent.kill(getTimestamp(), killerId, kx, ky, kz));
+    }
   }
 
   /**

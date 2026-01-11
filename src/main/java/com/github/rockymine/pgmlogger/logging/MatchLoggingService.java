@@ -114,9 +114,10 @@ public class MatchLoggingService {
     }
   }
 
-  public void logDeath(Player player, int x, int y, int z) {
+  public void logDeath(
+      Player victim, int vx, int vy, int vz, Player killer, Integer kx, Integer ky, Integer kz) {
     if (positionTracker != null && logDeaths) {
-      positionTracker.logDeath(player, x, y, z);
+      positionTracker.logDeath(victim, vx, vy, vz, killer, kx, ky, kz);
     }
   }
 

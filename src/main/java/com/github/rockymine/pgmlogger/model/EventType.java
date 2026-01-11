@@ -19,6 +19,9 @@ public enum EventType {
   /** Player spawn event, includes player ID and spawn coordinates */
   SPAWN,
 
+  /** Player kill event, includes player ID and kill coordinates */
+  KILL,
+
   /** Player death event, includes player ID and death coordinates */
   DEATH,
 

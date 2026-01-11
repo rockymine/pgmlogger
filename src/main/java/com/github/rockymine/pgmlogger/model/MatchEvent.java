@@ -120,6 +120,20 @@ public class MatchEvent {
   }
 
   /**
+   * Creates a player kill event.
+   *
+   * @param timestamp seconds since match start
+   * @param playerId the player's identifier
+   * @param x the kill x-coordinate
+   * @param y the kill y-coordinate
+   * @param z the kill z-coordinate
+   * @return a KILL event
+   */
+  public static MatchEvent kill(int timestamp, int playerId, int x, int y, int z) {
+    return new MatchEvent(timestamp, EventType.KILL, playerId, x, y, z, null, null, null);
+  }
+
+  /**
    * Creates a player death event.
    *
    * @param timestamp seconds since match start
