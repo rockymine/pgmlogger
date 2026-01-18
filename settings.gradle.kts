@@ -1,1 +1,1 @@
-rootProject.name = "pgmlogger"
+rootProject.name = "PGMLogger"

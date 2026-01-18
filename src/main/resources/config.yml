@@ -6,6 +6,10 @@ output:
   # Output folder for parquet files. Relative paths are resolved against the plugin data folder.
   path: data
 
+webhook:
+  # Discord webhook URL to post match summaries and attach the parquet file.
+  url: ""
+
 logging:
   positions: true
   deaths: true

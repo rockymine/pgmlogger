@@ -3,8 +3,11 @@ package com.github.rockymine.pgmlogger.logging;
 import com.github.rockymine.pgmlogger.PGMLogger;
 import com.github.rockymine.pgmlogger.privacy.PermittedPlayers;
 import com.github.rockymine.pgmlogger.tracking.PositionTracker;
+import com.github.rockymine.pgmlogger.webhook.DiscordWebhookClient;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Logger;
@@ -21,9 +24,15 @@ public class MatchLoggingService {
   private final Logger logger;
   private File dataFolder;
   private final PermittedPlayers permittedPlayers;
+  private final DiscordWebhookClient webhookClient;
 
   private PositionTracker positionTracker;
   private BukkitTask positionSamplerTask;
+
+  private String webhookUrl;
+  private String activeMatchName;
+  private String activeMatchId;
+  private Instant activeMatchStartTime;
 
   private int sampleIntervalTicks = 100;
   private boolean logPositions = true;
@@ -35,6 +44,7 @@ public class MatchLoggingService {
     this.plugin = plugin;
     this.logger = plugin.getLogger();
     this.permittedPlayers = permittedPlayers;
+    this.webhookClient = new DiscordWebhookClient(logger);
 
     updateDataFolder(dataFolder);
   }
@@ -53,6 +63,9 @@ public class MatchLoggingService {
   }
 
   public void onMatchStart(String mapName, String matchId) {
+    this.activeMatchName = mapName;
+    this.activeMatchId = matchId;
+    this.activeMatchStartTime = Instant.now();
     String mapSlug = toSlug(mapName);
     String matchSlug = toSlug(matchId);
     if (matchSlug.isEmpty()) {
@@ -76,14 +89,23 @@ public class MatchLoggingService {
   }
 
   public void onMatchEnd() {
+    Instant matchEndTime = Instant.now();
     stopPositionTracking();
 
     if (positionTracker != null) {
+      String matchName = activeMatchName;
+      String matchId = activeMatchId;
+      Instant matchStartTime = activeMatchStartTime;
       File savedFile = positionTracker.getFile();
       String fileSize = formatFileSize(positionTracker.getFileSizeBytes());
       logger.info("Data saved to: " + savedFile.getAbsolutePath() + " (" + fileSize + ")");
+      String duration = formatDuration(matchStartTime, matchEndTime);
+      sendWebhook(matchName, matchId, duration, savedFile, fileSize);
       positionTracker = null;
     }
+    activeMatchName = null;
+    activeMatchId = null;
+    activeMatchStartTime = null;
   }
 
   public void shutdown() {
@@ -196,6 +218,22 @@ public class MatchLoggingService {
     }
   }
 
+  public void updateWebhookUrl(String webhookUrl) {
+    this.webhookUrl = webhookUrl;
+  }
+
+  private void sendWebhook(
+      String matchName, String matchId, String duration, File savedFile, String fileSize) {
+    if (webhookUrl == null || webhookUrl.trim().isEmpty()) {
+      return;
+    }
+    Bukkit.getScheduler()
+        .runTaskAsynchronously(
+            plugin,
+            () -> webhookClient.sendMatchSaved(
+                webhookUrl, matchName, matchId, duration, savedFile, fileSize));
+  }
+
   private String toSlug(String value) {
     if (value == null) {
       return "";
@@ -215,5 +253,23 @@ public class MatchLoggingService {
       unitIndex++;
     } while (value >= 1024 && unitIndex < units.length - 1);
     return String.format("%.2f %s", value, units[unitIndex]);
+  }
+
+  private String formatDuration(Instant startTime, Instant endTime) {
+    if (startTime == null || endTime == null || endTime.isBefore(startTime)) {
+      return "unknown duration";
+    }
+    Duration duration = Duration.between(startTime, endTime);
+    long totalSeconds = duration.getSeconds();
+    long hours = totalSeconds / 3600;
+    long minutes = (totalSeconds % 3600) / 60;
+    long seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return String.format("%dh %dm %ds", hours, minutes, seconds);
+    }
+    if (minutes > 0) {
+      return String.format("%dm %ds", minutes, seconds);
+    }
+    return String.format("%ds", seconds);
   }
 }

@@ -46,6 +46,7 @@ public class PGMLogger extends JavaPlugin {
   @Override
   public void onEnable() {
     saveDefaultConfig();
+    reloadConfig();
 
     File dataFolder = resolveDataFolder();
 
@@ -223,6 +224,7 @@ public class PGMLogger extends JavaPlugin {
         getConfig().getBoolean("logging.spawns", true),
         getConfig().getBoolean("logging.wool", true));
     loggingService.updateDataFolder(resolveDataFolder());
+    loggingService.updateWebhookUrl(getConfig().getString("webhook.url", ""));
   }
 
   private File resolveDataFolder() {
