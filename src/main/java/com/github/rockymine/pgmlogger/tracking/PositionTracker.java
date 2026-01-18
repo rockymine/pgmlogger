@@ -4,9 +4,10 @@ import com.github.rockymine.pgmlogger.model.MatchEvent;
 import com.github.rockymine.pgmlogger.privacy.PermittedPlayers;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -47,9 +48,9 @@ public class PositionTracker {
   private final MatchEventWriter eventWriter;
   private final long matchStartTime;
   private final PermittedPlayers permittedPlayers;
-  private final Map<UUID, Integer> playerIds = new HashMap<>();
-  private int nextAnonymousId = 0;
-  private final Map<UUID, String> lastPositions = new HashMap<>();
+  private final Map<UUID, Integer> playerIds = new ConcurrentHashMap<>();
+  private final AtomicInteger nextAnonymousId = new AtomicInteger(0);
+  private final Map<UUID, String> lastPositions = new ConcurrentHashMap<>();
   private boolean writerFailedLogged = false;
 
   /**
@@ -89,7 +90,7 @@ public class PositionTracker {
       if (permittedPlayers.isPermitted(uuid)) {
         return permittedPlayers.getPlayerId(uuid);
       } else {
-        return nextAnonymousId++;
+        return nextAnonymousId.getAndIncrement();
       }
     });
   }
