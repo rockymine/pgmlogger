@@ -47,7 +47,7 @@ public class PGMLogger extends JavaPlugin {
   public void onEnable() {
     saveDefaultConfig();
 
-    File dataFolder = new File(getDataFolder(), "data");
+    File dataFolder = resolveDataFolder();
 
     permittedPlayers = new PermittedPlayers(this);
     loggingService = new MatchLoggingService(this, dataFolder, permittedPlayers);
@@ -222,5 +222,52 @@ public class PGMLogger extends JavaPlugin {
         getConfig().getBoolean("logging.deaths", true),
         getConfig().getBoolean("logging.spawns", true),
         getConfig().getBoolean("logging.wool", true));
+    loggingService.updateDataFolder(resolveDataFolder());
+  }
+
+  private File resolveDataFolder() {
+    String configured = getConfig().getString("output.path", "data");
+    if (configured == null || configured.trim().isEmpty()) {
+      configured = "data";
+    }
+    File folder = new File(configured);
+    if (!folder.isAbsolute()) {
+      folder = new File(getDataFolder(), configured);
+    }
+    File validated = validateWritableFolder(folder);
+    if (validated != null) {
+      return validated;
+    }
+
+    File fallback = new File(getDataFolder(), "data");
+    File fallbackValidated = validateWritableFolder(fallback);
+    if (fallbackValidated != null) {
+      getLogger()
+          .warning("Invalid output path in config; using default data folder: "
+              + fallbackValidated.getAbsolutePath());
+      return fallbackValidated;
+    }
+
+    getLogger()
+        .warning(
+            "Failed to validate output path and default data folder; using default path anyway: "
+                + fallback.getAbsolutePath());
+    return fallback;
+  }
+
+  private File validateWritableFolder(File folder) {
+    if (folder.exists()) {
+      if (!folder.isDirectory()) {
+        return null;
+      }
+    } else {
+      if (!folder.mkdirs()) {
+        return null;
+      }
+    }
+    if (!folder.canWrite()) {
+      return null;
+    }
+    return folder;
   }
 }

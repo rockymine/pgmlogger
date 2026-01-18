@@ -309,6 +309,14 @@ public class PositionTracker {
     return file.getName();
   }
 
+  public File getFile() {
+    return file;
+  }
+
+  public long getFileSizeBytes() {
+    return file.length();
+  }
+
   /** Closes the tracker and finalizes the match data file. */
   public void close() {
     // Write match end event

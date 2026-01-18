@@ -2,6 +2,10 @@
 sampling:
   interval-ticks: 100
 
+output:
+  # Output folder for parquet files. Relative paths are resolved against the plugin data folder.
+  path: data
+
 logging:
   positions: true
   deaths: true

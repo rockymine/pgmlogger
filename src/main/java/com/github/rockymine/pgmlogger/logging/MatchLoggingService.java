@@ -19,7 +19,7 @@ public class MatchLoggingService {
 
   private final PGMLogger plugin;
   private final Logger logger;
-  private final File dataFolder;
+  private File dataFolder;
   private final PermittedPlayers permittedPlayers;
 
   private PositionTracker positionTracker;
@@ -34,12 +34,9 @@ public class MatchLoggingService {
   public MatchLoggingService(PGMLogger plugin, File dataFolder, PermittedPlayers permittedPlayers) {
     this.plugin = plugin;
     this.logger = plugin.getLogger();
-    this.dataFolder = dataFolder;
     this.permittedPlayers = permittedPlayers;
 
-    if (!dataFolder.exists()) {
-      dataFolder.mkdirs();
-    }
+    updateDataFolder(dataFolder);
   }
 
   public void applySettings(
@@ -56,14 +53,18 @@ public class MatchLoggingService {
   }
 
   public void onMatchStart(String mapName, String matchId) {
-    String mapSlug = mapName.toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+    String mapSlug = toSlug(mapName);
+    String matchSlug = toSlug(matchId);
+    if (matchSlug.isEmpty()) {
+      matchSlug = "match";
+    }
 
     File mapFolder = new File(dataFolder, mapSlug);
     if (!mapFolder.exists()) {
       mapFolder.mkdirs();
     }
 
-    String filename = FILENAME_FORMAT.format(LocalDateTime.now()) + ".parquet";
+    String filename = FILENAME_FORMAT.format(LocalDateTime.now()) + "_" + matchSlug + ".parquet";
     File parquetFile = new File(mapFolder, filename);
 
     try {
@@ -78,7 +79,9 @@ public class MatchLoggingService {
     stopPositionTracking();
 
     if (positionTracker != null) {
-      logger.info("Data saved to: " + positionTracker.getFileName());
+      File savedFile = positionTracker.getFile();
+      String fileSize = formatFileSize(positionTracker.getFileSizeBytes());
+      logger.info("Data saved to: " + savedFile.getAbsolutePath() + " (" + fileSize + ")");
       positionTracker = null;
     }
   }
@@ -184,5 +187,33 @@ public class MatchLoggingService {
 
   public String getActiveFileName() {
     return positionTracker != null ? positionTracker.getFileName() : null;
+  }
+
+  public void updateDataFolder(File dataFolder) {
+    this.dataFolder = dataFolder;
+    if (!dataFolder.exists()) {
+      dataFolder.mkdirs();
+    }
+  }
+
+  private String toSlug(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+  }
+
+  private String formatFileSize(long bytes) {
+    if (bytes < 1024) {
+      return bytes + " B";
+    }
+    String[] units = {"KB", "MB", "GB", "TB"};
+    double value = bytes;
+    int unitIndex = -1;
+    do {
+      value /= 1024.0;
+      unitIndex++;
+    } while (value >= 1024 && unitIndex < units.length - 1);
+    return String.format("%.2f %s", value, units[unitIndex]);
   }
 }

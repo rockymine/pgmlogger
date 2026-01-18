@@ -2,12 +2,10 @@ name: pgmlogger
 version: '1.0.0'
 main: com.github.rockymine.pgmlogger.PGMLogger
 api-version: '1.13'
-
+description: Logs player positions and events for CTW map analysis
+author: rockymine
 depend:
   - PGM
-
-description: Logs player positions and events for CTW map analysis
-author: YourName
 
 commands:
   pgmlogger:
