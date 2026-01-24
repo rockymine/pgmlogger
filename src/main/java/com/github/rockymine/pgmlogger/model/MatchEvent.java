@@ -127,10 +127,12 @@ public class MatchEvent {
    * @param x the kill x-coordinate
    * @param y the kill y-coordinate
    * @param z the kill z-coordinate
+   * @param heldItem the held item type ordinal
+   * @param invCount the total inventory item count
    * @return a KILL event
    */
-  public static MatchEvent kill(int timestamp, int playerId, int x, int y, int z) {
-    return new MatchEvent(timestamp, EventType.KILL, playerId, x, y, z, null, null, null);
+  public static MatchEvent kill(int timestamp, int playerId, int x, int y, int z, Integer heldItem, int invCount) {
+    return new MatchEvent(timestamp, EventType.KILL, playerId, x, y, z, heldItem, invCount, null);
   }
 
   /**
