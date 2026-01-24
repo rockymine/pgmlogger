@@ -153,7 +153,8 @@ public class PositionTracker {
   public void logDeath(
       Player victim, int vx, int vy, int vz, Player killer, Integer kx, Integer ky, Integer kz) {
     int victimId = getPlayerId(victim.getUniqueId());
-    queueWrite(MatchEvent.death(getTimestamp(), victimId, vx, vy, vz));
+    int time = getTimestamp();
+    queueWrite(MatchEvent.death(time, victimId, vx, vy, vz));
 
     if (killer != null) {
       int killerId = getPlayerId(killer.getUniqueId());
@@ -161,7 +162,7 @@ public class PositionTracker {
       int invCount = countInventoryItems(killer);
 
       queueWrite(
-          MatchEvent.kill(getTimestamp(), killerId, kx, ky, kz, heldItem, invCount, victimId));
+          MatchEvent.kill(time, killerId, kx, ky, kz, heldItem, invCount, victimId));
     }
   }
 
