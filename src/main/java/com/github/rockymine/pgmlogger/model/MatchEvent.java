@@ -38,6 +38,7 @@ public class MatchEvent {
       Types.optional(PrimitiveTypeName.INT32).named("z"),
       Types.optional(PrimitiveTypeName.INT32).named("held_item"),
       Types.optional(PrimitiveTypeName.INT32).named("inventory_count"),
+      Types.optional(PrimitiveTypeName.INT32).named("victim_id"),
       Types.optional(PrimitiveTypeName.INT32).as(intType(8, false)).named("wool_id"));
 
   private final int timestamp;
@@ -46,6 +47,7 @@ public class MatchEvent {
   private final Integer x, y, z;
   private final Integer heldItem;
   private final Integer invCount;
+  private final Integer victimId;
   public final Integer woolId;
 
   /**
@@ -63,6 +65,7 @@ public class MatchEvent {
    * @param z the z-coordinate, null if not applicable
    * @param heldItem the held item type ordinal, null if not applicable
    * @param invCount the total inventory count, null if not applicable
+   * @param victimId the player id of a victim in a kill event
    * @param woolId the wool color ordinal, null if not applicable
    */
   public MatchEvent(
@@ -74,6 +77,7 @@ public class MatchEvent {
       Integer z,
       Integer heldItem,
       Integer invCount,
+      Integer victimId,
       Integer woolId) {
     this.timestamp = timestamp;
     this.eventType = eventType;
@@ -83,6 +87,7 @@ public class MatchEvent {
     this.z = z;
     this.heldItem = heldItem;
     this.invCount = invCount;
+    this.victimId = victimId;
     this.woolId = woolId;
   }
 
@@ -92,7 +97,7 @@ public class MatchEvent {
    * @return a MATCH_START event
    */
   public static MatchEvent matchStart() {
-    return new MatchEvent(0, EventType.MATCH_START, null, null, null, null, null, null, null);
+    return new MatchEvent(0, EventType.MATCH_START, null, null, null, null, null, null, null, null);
   }
 
   /**
@@ -102,7 +107,8 @@ public class MatchEvent {
    * @return a MATCH_END event
    */
   public static MatchEvent matchEnd(int timestamp) {
-    return new MatchEvent(timestamp, EventType.MATCH_END, null, null, null, null, null, null, null);
+    return new MatchEvent(
+        timestamp, EventType.MATCH_END, null, null, null, null, null, null, null, null);
   }
 
   /**
@@ -116,7 +122,7 @@ public class MatchEvent {
    * @return a SPAWN event
    */
   public static MatchEvent spawn(int timestamp, int playerId, int x, int y, int z) {
-    return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null);
+    return new MatchEvent(timestamp, EventType.SPAWN, playerId, x, y, z, null, null, null, null);
   }
 
   /**
@@ -129,10 +135,20 @@ public class MatchEvent {
    * @param z the kill z-coordinate
    * @param heldItem the held item type ordinal
    * @param invCount the total inventory item count
+   * @param victimId the victim's identifier
    * @return a KILL event
    */
-  public static MatchEvent kill(int timestamp, int playerId, int x, int y, int z, Integer heldItem, int invCount) {
-    return new MatchEvent(timestamp, EventType.KILL, playerId, x, y, z, heldItem, invCount, null);
+  public static MatchEvent kill(
+      int timestamp,
+      int playerId,
+      int x,
+      int y,
+      int z,
+      Integer heldItem,
+      int invCount,
+      int victimId) {
+    return new MatchEvent(
+        timestamp, EventType.KILL, playerId, x, y, z, heldItem, invCount, victimId, null);
   }
 
   /**
@@ -146,7 +162,7 @@ public class MatchEvent {
    * @return a DEATH event
    */
   public static MatchEvent death(int timestamp, int playerId, int x, int y, int z) {
-    return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, null);
+    return new MatchEvent(timestamp, EventType.DEATH, playerId, x, y, z, null, null, null, null);
   }
 
   /**
@@ -164,7 +180,7 @@ public class MatchEvent {
   public static MatchEvent position(
       int timestamp, int playerId, int x, int y, int z, Integer heldItem, int invCount) {
     return new MatchEvent(
-        timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null);
+        timestamp, EventType.POSITION, playerId, x, y, z, heldItem, invCount, null, null);
   }
 
   /**
@@ -181,7 +197,7 @@ public class MatchEvent {
   public static MatchEvent woolTouch(
       int timestamp, int playerId, int x, int y, int z, Integer woolColor) {
     return new MatchEvent(
-        timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, woolColor);
+        timestamp, EventType.WOOL_TOUCH, playerId, x, y, z, null, null, null, woolColor);
   }
 
   /**
@@ -198,7 +214,7 @@ public class MatchEvent {
   public static MatchEvent woolCapture(
       int timestamp, int playerId, int x, int y, int z, Integer woolColor) {
     return new MatchEvent(
-        timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, woolColor);
+        timestamp, EventType.WOOL_CAPTURE, playerId, x, y, z, null, null, null, woolColor);
   }
 
   public static class Serializer implements Dehydrator<MatchEvent> {
@@ -227,6 +243,7 @@ public class MatchEvent {
       if (event.z != null) writer.write("z", event.z);
       if (event.heldItem != null) writer.write("held_item", event.heldItem);
       if (event.invCount != null) writer.write("inventory_count", event.invCount);
+      if (event.victimId != null) writer.write("victim_id", event.victimId);
       if (event.woolId != null) writer.write("wool_id", event.woolId);
     }
   }
